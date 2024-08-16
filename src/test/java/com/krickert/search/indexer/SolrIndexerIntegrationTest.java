@@ -60,6 +60,7 @@ public class SolrIndexerIntegrationTest {
                     "bat, ball, mitt, diamond, park"
             };
 
+
     @Inject
     public SolrIndexerIntegrationTest(SolrDynamicClient solrDynamicClient, ResourceLoader resourceLoader) {
         this.solrDynamicClient = solrDynamicClient;
