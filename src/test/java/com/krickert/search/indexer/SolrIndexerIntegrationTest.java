@@ -4,7 +4,6 @@ import com.krickert.search.indexer.solr.HttpSolrSelectClient;
 import com.krickert.search.indexer.solr.HttpSolrSelectClientImpl;
 import com.krickert.search.indexer.solr.JsonToSolrDoc;
 import io.micronaut.core.io.ResourceLoader;
-import io.micronaut.core.io.ResourceResolver;
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
 import jakarta.inject.Inject;
 
@@ -28,11 +27,15 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URISyntaxException;
+import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Paths;
 import java.util.Collection;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @MicronautTest
 public class SolrIndexerIntegrationTest {
@@ -93,7 +96,7 @@ public class SolrIndexerIntegrationTest {
         try {
             createCollectionResponse = solrDynamicClient.createCollection(sol7rUrl, testCollection);
             assertEquals(200, createCollectionResponse.code());
-            String jsonData = loadResource("solr_docs.json");
+            String jsonData = loadResource();
             HttpResponse<String> addDocsResponse = solrDynamicClient.sendJsonToSolr(sol7rUrl, testCollection, jsonData);
             assertEquals(200, addDocsResponse.code());
             HttpResponse<String> commitResponse = solrDynamicClient.sendJsonToSolr(sol7rUrl, testCollection, "{ \"commit\": {} }");
@@ -119,12 +122,18 @@ public class SolrIndexerIntegrationTest {
         }
     }
 
-    private static void uploadConfigSet(SolrClient client) throws SolrServerException, IOException {
+    private void uploadConfigSet(SolrClient client) throws SolrServerException, IOException {
         ConfigSetAdminRequest.Upload request = new ConfigSetAdminRequest.Upload();
         request.setConfigSetName("semantic_simple");
-        ResourceResolver resolver = new ResourceResolver();
-        File resource = new File(resolver.getResource("classpath:semantic_example.zip").get().getFile());
-        request.setUploadFile(resource, "zip" );
+        Optional<URL> resource = resourceLoader.getResource("classpath:semantic_example.zip");
+        assertTrue(resource.isPresent(), "Resource not found!");
+        final File file;
+        try {
+            file = Paths.get(resource.get().toURI()).toFile();
+        } catch (URISyntaxException e) {
+            throw new RuntimeException(e);
+        }
+        request.setUploadFile(file, "zip" );
         // Execute the request
         ConfigSetAdminResponse response = request.process(client);
 
@@ -137,8 +146,8 @@ public class SolrIndexerIntegrationTest {
         }
     }
 
-    private String loadResource(String resourceName) throws IOException {
-        Optional<InputStream> file = resourceLoader.getResourceAsStream(resourceName);
+    private String loadResource() throws IOException {
+        Optional<InputStream> file = resourceLoader.getResourceAsStream("solr_docs.json");
         if (file.isPresent()) {
             try (InputStream is = file.get()) {
                 return IOUtils.toString(is, StandardCharsets.UTF_8);
@@ -146,8 +155,9 @@ public class SolrIndexerIntegrationTest {
                 throw new IOException(e);
             }
         } else {
-            throw new FileNotFoundException(resourceName);
+            throw new FileNotFoundException("solr_docs.json");
         }
     }
 
 }
+
