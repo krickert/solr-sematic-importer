@@ -23,7 +23,9 @@ public class JsonToSolrDoc {
         } catch (JsonProcessingException e) {
             throw new RuntimeException(e);
         }
+        @SuppressWarnings( "unchecked")
         Map<String, Object> response = (Map<String, Object>)map.get("response");
+        @SuppressWarnings( "unchecked")
         List<Map<String, Object>> docs = (List<Map<String, Object>>)response.get("docs");
 
         List<String> jsonDocuments = new ArrayList<>();
@@ -46,8 +48,11 @@ public class JsonToSolrDoc {
         } catch (JsonProcessingException e) {
             throw new RuntimeException(e);
         }
+        @SuppressWarnings( "unchecked")
         Map<String, Object> response = (Map<String, Object>)map.get("response");
+        @SuppressWarnings( "unchecked")
         Map<String, Object> responseHeader = (Map<String, Object>)map.get("responseHeader");
+        @SuppressWarnings( "unchecked")
         List<Map<String, Object>> docs = (List<Map<String, Object>>)response.get("docs");
 
         List<SolrInputDocument> solrDocuments = new ArrayList<>();

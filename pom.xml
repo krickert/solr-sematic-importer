@@ -11,7 +11,9 @@
     <groupId>io.micronaut.platform</groupId>
     <artifactId>micronaut-parent</artifactId>
     <version>4.5.1</version>
+    <relativePath/>
   </parent>
+
   <properties>
     <packaging>jar</packaging>
     <jdk.version>17</jdk.version>
@@ -133,6 +135,11 @@
       <groupId>org.apache.solr</groupId>
       <artifactId>solr-solrj</artifactId>
       <version>9.6.1</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.zookeeper</groupId>
+      <artifactId>zookeeper</artifactId>
+      <version>3.9.2</version>
     </dependency>
     <!-- https://mvnrepository.com/artifact/com.github.os72/protobuf-dynamic -->
     <dependency>
