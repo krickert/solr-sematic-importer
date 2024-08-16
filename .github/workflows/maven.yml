@@ -31,7 +31,7 @@ jobs:
           cache: maven
 
       - name: Configure Maven with GitHub Packages
-        run: echo $MAVEN_SETTINGS | base64 --decode > $HOME/.m2/settings.xml
+        run: echo $MAVEN_SETTINGS > $HOME/.m2/settings.xml
         env:
           MAVEN_SETTINGS: ${{ secrets.MAVEN_SETTINGS }}
 
