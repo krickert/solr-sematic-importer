@@ -67,10 +67,6 @@ public class SolrClientService {
         }
     }
 
-    public static void main(String[] args) {
-        Micronaut.run(SolrClientService.class, args);
-    }
-
     // CustomRequestWriter to add authorization header
     public static class CustomRequestWriter extends RequestWriter {
         private final String accessToken;
