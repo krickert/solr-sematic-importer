@@ -1,9 +1,12 @@
 package com.krickert.search.indexer.enhancers;
 
+import com.krickert.search.indexer.config.IndexerConfiguration;
 import com.krickert.search.indexer.solr.JsonToSolrDocParser;
 import com.krickert.search.indexer.SemanticIndexer;
+import com.krickert.search.indexer.solr.ProtobufSolrIndexer;
 import com.krickert.search.model.pipe.PipeDocument;
 import com.krickert.search.model.test.util.TestDataHelper;
+import io.micronaut.core.io.ResourceLoader;
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
 import jakarta.inject.Inject;
 import org.apache.solr.client.solrj.SolrClient;
@@ -34,20 +37,26 @@ public class ProtobufToSolrDocumentTest {
     final ProtobufToSolrDocument unit;
     private final Collection<PipeDocument> pipeDocumentCollection;
     private final SolrContainer container9;
-    private final String testCollection = "test_collection";
-    private final SemanticIndexer semanticIndexer;
+    private final ProtobufSolrIndexer protobufSolrIndexer;
+    private final IndexerConfiguration indexerConfiguration;
+
     @Inject
-    ProtobufToSolrDocumentTest(ProtobufToSolrDocument unit) throws SolrServerException, IOException {
+    ProtobufToSolrDocumentTest(ProtobufToSolrDocument unit, ResourceLoader resourceLoader, ProtobufSolrIndexer protobufSolrIndexer, IndexerConfiguration indexerConfiguration) throws SolrServerException, IOException {
         this.unit = unit;
+
+        this.protobufSolrIndexer = protobufSolrIndexer;
+
         this.pipeDocumentCollection = TestDataHelper.getFewHunderedPipeDocuments();
         final DockerImageName solrImage = DockerImageName.parse("solr:9.6.1");
         this.container9 = createContainer(solrImage);
+
+        String testCollection = indexerConfiguration.getDestinationSolrConfiguration().getCollection();
 
         try (SolrClient solrClient = createSolr9Client()) {
             solrClient.request(CollectionAdminRequest.createCollection(testCollection, "_default", 1, 1));
         }
         String solrDestinationUrl = "http://" + container9.getHost() + ":" + container9.getSolrPort() + "/solr";
-        this.semanticIndexer = new SemanticIndexer(unit, new MockSolrSelectClient(), new JsonToSolrDocParser(), solrDestinationUrl, "test_collection");
+        this.indexerConfiguration = indexerConfiguration;
     }
 
     @Test
@@ -61,9 +70,10 @@ public class ProtobufToSolrDocumentTest {
 
     @Test
     void testInsertProtobufToSolrDocument() {
-        semanticIndexer.exportProtobufToSolr(new ArrayList<>(TestDataHelper.getFewHunderedPipeDocuments()));
+        protobufSolrIndexer.exportProtobufToSolr(new ArrayList<>(TestDataHelper.getFewHunderedPipeDocuments()));
         try (SolrClient solrClient = createSolr9Client()) {
             try {
+                String testCollection = indexerConfiguration.getDestinationSolrConfiguration().getCollection();
                 QueryResponse response = solrClient.query(testCollection, new SolrQuery("*:*"));
                 assertEquals(TestDataHelper.getFewHunderedPipeDocuments().size(), response.getResults().getNumFound());
             } catch (SolrServerException | IOException e) {

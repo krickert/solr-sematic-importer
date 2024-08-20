@@ -2,6 +2,9 @@ micronaut:
   environment:
     - test
 
+solr9-test-port: ${random.port}
+solr7-test-port: ${random.port}
+
 indexer:
   vector-grpc-channel: "localhost:${grpc-test-client-config.vectorizer.grpc-test-port}"
   chunker-grpc-channel: "localhost:${grpc-test-client-config.chunker.grpc-test-port}"
@@ -14,14 +17,14 @@ solr-config:
     version: 7.7.3
     collection: source_collection
     connection:
-      url: http://localhost:8983/solr
+      url: http://localhost:${solr7-test-port}/solr
       authentication:
         enabled: false
   destination:
     version: 9.6.1
     collection: destination_collection
     connection:
-      url: http://localhost:8983/solr
+      url: http://localhost:${solr9-test-port}/solr
       authentication:
         enabled: true
         type: jwt
@@ -66,4 +69,3 @@ grpc-test-client-config:
     rest-mapped-port: 60401
     docker-image-name: krickert/vectorizer:1.0-SNAPSHOT
 
-solr-test-port: ${random.port}

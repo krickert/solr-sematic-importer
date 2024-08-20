@@ -30,14 +30,10 @@ public class SolrSemanticImporterCommand implements Runnable {
         if (verbose) {
             System.out.println("Hi!");
         }
-        try {
-            if (enabled) {
-                semanticIndexer.exportSolrDocsFromExternalSolrCollection(5);
-                System.out.println("Done!");
-                System.exit(0);
-            }
-        } catch (IOException | InterruptedException e) {
-            throw new RuntimeException(e);
+        if (enabled) {
+            semanticIndexer.exportSolrDocsFromExternalSolrCollection(5);
+            System.out.println("Done!");
+            System.exit(0);
         }
     }
 }

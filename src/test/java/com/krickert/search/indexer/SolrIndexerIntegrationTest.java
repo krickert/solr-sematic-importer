@@ -2,8 +2,10 @@ package com.krickert.search.indexer;
 
 import com.krickert.search.indexer.config.IndexerConfiguration;
 import com.krickert.search.indexer.solr.JsonToSolrDocParser;
+import com.krickert.search.indexer.solr.SolrTestContainers;
 import com.krickert.search.indexer.solr.httpclient.select.HttpSolrSelectClient;
 import com.krickert.search.indexer.solr.httpclient.select.HttpSolrSelectClientImpl;
+import io.micronaut.context.annotation.Value;
 import io.micronaut.core.io.ResourceLoader;
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
 import jakarta.inject.Inject;
@@ -18,7 +20,12 @@ import org.apache.solr.client.solrj.request.ConfigSetAdminRequest;
 import org.apache.solr.client.solrj.response.ConfigSetAdminResponse;
 import org.apache.solr.client.solrj.response.UpdateResponse;
 import org.apache.solr.common.SolrInputDocument;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.testcontainers.containers.SolrContainer;
@@ -37,45 +44,47 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.*;
 
 @MicronautTest
 public class SolrIndexerIntegrationTest {
     private static final Logger log = LoggerFactory.getLogger(SolrIndexerIntegrationTest.class);
 
-    private final DockerImageName SOLR9_IMAGE = DockerImageName.parse("solr:9.6.1");
-    private final SolrContainer container9 = createContainer(SOLR9_IMAGE);
-    private final DockerImageName SOLR7_IMAGE = DockerImageName.parse("solr:7.7.3");
-    private final SolrContainer container7 = createContainer(SOLR7_IMAGE);
+
     private final SolrDynamicClient solrDynamicClient;
     private final ResourceLoader resourceLoader;
+    private SemanticIndexer semanticIndexer;
     private final IndexerConfiguration indexerConfiguration;
-    String[] docs =
-            {
-                    "Watermelons are red.",
-                    "I like watermelons for breakfast.",
-                    "Saffron is a wonderful spice for soup.",
-                    "Hollywood writers are demanding higher wages",
-                    "The fruit is large, green outside and red inside with seeds.",
-                    "Skyscrapers are taller than most buildings",
-                    "Construction workers did not cross the picket line",
-                    "A bowling score of 300 is a terrible score",
-                    "bat, ball, mitt, diamond, park"
-            };
+    private final SolrTestContainers solrTestContainers;
+    private final SolrContainer container7;
+    private final SolrContainer container9;
 
+    @BeforeEach
+    void setUp() {
+        // Mock the behavior of createSolr9Client
+        // Assuming createSolr9Client is a method in SemanticIndexer
 
-    @Inject
-    public SolrIndexerIntegrationTest(SolrDynamicClient solrDynamicClient, ResourceLoader resourceLoader, IndexerConfiguration indexerConfiguration) {
-        this.solrDynamicClient = solrDynamicClient;
-        this.resourceLoader = resourceLoader;
-        this.indexerConfiguration = indexerConfiguration;
+        // Partial mock of the semanticIndexer to spy on it
+        semanticIndexer = spy(semanticIndexer);
+        SolrClient solr9Client = createSolr9Client();
+        // Override the createSolr9Client method
+        doReturn(solr9Client).when(semanticIndexer).createSolr9Client();
     }
 
-    private SolrContainer createContainer(DockerImageName image) {
-        // Create the solr container.
-        SolrContainer container = new SolrContainer(image);
-        // Start the container. This step might take some time...
-        container.start();
-        return container;
+    @Inject
+    public SolrIndexerIntegrationTest(
+            SolrDynamicClient solrDynamicClient,
+            ResourceLoader resourceLoader,
+            SemanticIndexer semanticIndexer,
+            IndexerConfiguration indexerConfiguration,
+            SolrTestContainers solrTestContainers) {
+        this.solrDynamicClient = solrDynamicClient;
+        this.resourceLoader = resourceLoader;
+        this.semanticIndexer = semanticIndexer;
+        this.indexerConfiguration = indexerConfiguration;
+        this.solrTestContainers = solrTestContainers;
+        this.container7 = solrTestContainers.getContainer7();
+        this.container9 = solrTestContainers.getContainer9();
     }
 
     private SolrClient createSolr9Client() {
@@ -88,6 +97,11 @@ public class SolrIndexerIntegrationTest {
     void testSolr9Ping() throws SolrServerException, IOException {
         SolrClient client = createSolr9Client();
         client.ping("dummy");
+    }
+
+    @Test
+    void testSemanticIndexer() {
+        semanticIndexer.exportSolrDocsFromExternalSolrCollection(5);
     }
 
     @Test
@@ -162,6 +176,17 @@ public class SolrIndexerIntegrationTest {
             throw new FileNotFoundException("solr_docs.json");
         }
     }
-
+    String[] docs =
+            {
+                    "Watermelons are red.",
+                    "I like watermelons for breakfast.",
+                    "Saffron is a wonderful spice for soup.",
+                    "Hollywood writers are demanding higher wages",
+                    "The fruit is large, green outside and red inside with seeds.",
+                    "Skyscrapers are taller than most buildings",
+                    "Construction workers did not cross the picket line",
+                    "A bowling score of 300 is a terrible score",
+                    "bat, ball, mitt, diamond, park"
+            };
 }
 
