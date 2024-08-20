@@ -54,7 +54,12 @@ public class ProtobufToSolrDocumentTest {
     }
 
     @Inject
-    ProtobufToSolrDocumentTest(ProtobufToSolrDocument unit, ResourceLoader resourceLoader, ProtobufSolrIndexer protobufSolrIndexer, IndexerConfiguration indexerConfiguration) throws SolrServerException, IOException {
+    ProtobufToSolrDocumentTest(ProtobufToSolrDocument unit,
+                               ResourceLoader resourceLoader,
+                               ProtobufSolrIndexer protobufSolrIndexer,
+                               IndexerConfiguration indexerConfiguration)
+            throws SolrServerException, IOException {
+
         this.unit = unit;
 
         this.protobufSolrIndexer = protobufSolrIndexer;

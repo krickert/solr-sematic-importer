@@ -26,17 +26,17 @@ import java.util.concurrent.TimeoutException;
 @Factory
 public class SolrClientService {
     private static final Logger log = LoggerFactory.getLogger(SolrClientService.class);
-    @Value("${indexer.destination.solr-connection.authentication.token-url}")
+    @Value("${solr-config.destination.connection.authentication.issuer}")
     private String tokenUrl;
 
-    @Value("${indexer.destination.solr-connection.authentication.client-id}")
+    @Value("${solr-config.destination.connection.authentication.client-id}")
     private String clientId;
 
-    @Value("${indexer.destination.solr-connection.authentication.client-secret}")
+    @Value("${solr-config.destination.connection.authentication.client-secret}")
     private String clientSecret;
 
     @Inject
-    @Client("${indexer.destination.solr-connection.authentication.token-url}")
+    @Client("${solr-config.destination.connection.authentication.issuer}")
     HttpClient oktaHttpClient;
 
     public Http2SolrClient createOktaSolrClient(String solrUrl) throws InterruptedException, ExecutionException, TimeoutException {
@@ -48,7 +48,9 @@ public class SolrClientService {
     }
 
     @Bean
-    public SolrClient createSolrClient(String solrUrl, String collection) {
+    public SolrClient createSolrClient(
+            @Value("${solr-config.destination.connection.url}") String solrUrl,
+            @Value("${solr-config.destination.collection}") String collection) {
         return new Http2SolrClient.Builder(solrUrl)
                 .withDefaultCollection(collection)
                 .withFollowRedirects(true)

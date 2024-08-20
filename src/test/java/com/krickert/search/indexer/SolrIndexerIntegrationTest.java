@@ -1,10 +1,17 @@
 package com.krickert.search.indexer;
 
 import com.krickert.search.indexer.config.IndexerConfiguration;
+import com.krickert.search.indexer.enhancers.ProtobufToSolrDocument;
 import com.krickert.search.indexer.solr.JsonToSolrDocParser;
+import com.krickert.search.indexer.solr.SolrDocumentConverter;
 import com.krickert.search.indexer.solr.SolrTestContainers;
+import com.krickert.search.indexer.solr.client.SolrAdminActions;
+import com.krickert.search.indexer.solr.httpclient.admin.SolrAdminTaskClient;
 import com.krickert.search.indexer.solr.httpclient.select.HttpSolrSelectClient;
 import com.krickert.search.indexer.solr.httpclient.select.HttpSolrSelectClientImpl;
+import com.krickert.search.model.pipe.PipeDocument;
+import com.krickert.search.model.test.util.TestDataHelper;
+import com.krickert.search.model.util.ProtobufUtils;
 import io.micronaut.context.annotation.Value;
 import io.micronaut.core.io.ResourceLoader;
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
@@ -20,16 +27,12 @@ import org.apache.solr.client.solrj.request.ConfigSetAdminRequest;
 import org.apache.solr.client.solrj.response.ConfigSetAdminResponse;
 import org.apache.solr.client.solrj.response.UpdateResponse;
 import org.apache.solr.common.SolrInputDocument;
+import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.testcontainers.containers.SolrContainer;
-import org.testcontainers.utility.DockerImageName;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -40,7 +43,9 @@ import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Paths;
 import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -58,6 +63,8 @@ public class SolrIndexerIntegrationTest {
     private final SolrTestContainers solrTestContainers;
     private final SolrContainer container7;
     private final SolrContainer container9;
+    private final ProtobufToSolrDocument protobufToSolrDocument = new ProtobufToSolrDocument();
+    private final SolrAdminTaskClient adminTaskClient;
 
     @BeforeEach
     void setUp() {
@@ -77,7 +84,8 @@ public class SolrIndexerIntegrationTest {
             ResourceLoader resourceLoader,
             SemanticIndexer semanticIndexer,
             IndexerConfiguration indexerConfiguration,
-            SolrTestContainers solrTestContainers) {
+            SolrTestContainers solrTestContainers,
+            SolrAdminTaskClient adminTaskClient) {
         this.solrDynamicClient = solrDynamicClient;
         this.resourceLoader = resourceLoader;
         this.semanticIndexer = semanticIndexer;
@@ -85,6 +93,9 @@ public class SolrIndexerIntegrationTest {
         this.solrTestContainers = solrTestContainers;
         this.container7 = solrTestContainers.getContainer7();
         this.container9 = solrTestContainers.getContainer9();
+        this.adminTaskClient = adminTaskClient;
+        log.info("Indexer configuration: {}", indexerConfiguration);
+        log.info("solrTestContainers: {}", solrTestContainers);
     }
 
     private SolrClient createSolr9Client() {
@@ -95,13 +106,46 @@ public class SolrIndexerIntegrationTest {
 
     @Test
     void testSolr9Ping() throws SolrServerException, IOException {
-        SolrClient client = createSolr9Client();
-        client.ping("dummy");
+        try (SolrClient client = createSolr9Client()) {
+            client.ping("dummy");
+        }
     }
 
     @Test
     void testSemanticIndexer() {
-        semanticIndexer.exportSolrDocsFromExternalSolrCollection(5);
+        //this would just run, but we first have to setup the source and destination solr
+        setupSolr7ForExportTest();
+        semanticIndexer.exportSolrDocsFromExternalSolrCollection(
+                getSolr7Url(),
+                getSolr9Url(),
+                indexerConfiguration.getSourceSolrConfiguration().getCollection(),
+                indexerConfiguration.getDestinationSolrConfiguration().getCollection(),
+                5);
+    }
+
+    private void setupSolr7ForExportTest() {
+        String solrUrl = getSolr7Url();
+        String collection = indexerConfiguration.getSourceSolrConfiguration().getCollection();
+        log.info("Solr source collection: {}", collection);
+        solrDynamicClient.createCollection(solrUrl, collection);
+        log.info("Solr source collection created: {}", collection);
+        Collection<PipeDocument> protos = TestDataHelper.getFewHunderedPipeDocuments().stream().filter(doc -> doc.getDocumentType().equals("ARTICLE")).toList();
+        List<SolrInputDocument> solrDocuments = protos.stream().map(protobufToSolrDocument::convertProtobufToSolrDocument).collect(Collectors.toList());
+        solrDynamicClient.sendJsonToSolr(solrUrl, collection, SolrDocumentConverter.convertSolrDocumentsToJson(solrDocuments));
+        solrDynamicClient.commit(solrUrl, collection);
+        log.info("Solr protocol buffer documents have been imported to Solr 7");
+    }
+
+    private @NotNull String getSolr7Url() {
+        String solr7Url =  "http://" + container7.getHost() + ":" + container7.getSolrPort() + "/solr";
+        log.info("Solr 7 URL: {}", solr7Url);
+        return solr7Url;
+    }
+
+    private @NotNull String getSolr9Url() {
+        String solr9Url =  "http://" + container9.getHost() + ":" + container9.getSolrPort() + "/solr";
+        log.info("Solr 9 URL: {}", solr9Url);
+        return solr9Url;
     }
 
     @Test
@@ -123,7 +167,7 @@ public class SolrIndexerIntegrationTest {
             JsonToSolrDocParser jsonToSolrDoc = new JsonToSolrDocParser();
             Collection<SolrInputDocument> docs = jsonToSolrDoc.parseSolrDocuments(solrDocs).getDocs();
             SolrClient solrClient = createSolr9Client();
-            uploadConfigSet(solrClient);
+            uploadConfigSet(solrClient, "price_semantic_example.zip");
             solrClient.request(CollectionAdminRequest.createCollection(testCollection, "semantic_simple",1, 1));
             UpdateResponse addSolr9DocsResponse = solrClient.add(testCollection, docs);
             assertEquals(0, addSolr9DocsResponse.getStatus());
@@ -140,10 +184,10 @@ public class SolrIndexerIntegrationTest {
         }
     }
 
-    private void uploadConfigSet(SolrClient client) throws SolrServerException, IOException {
+    private void uploadConfigSet(SolrClient client, String resourceConfigZip) throws SolrServerException, IOException {
         ConfigSetAdminRequest.Upload request = new ConfigSetAdminRequest.Upload();
         request.setConfigSetName("semantic_simple");
-        Optional<URL> resource = resourceLoader.getResource("classpath:semantic_example.zip");
+        Optional<URL> resource = resourceLoader.getResource(resourceConfigZip);
         assertTrue(resource.isPresent(), "Resource not found!");
         final File file;
         try {

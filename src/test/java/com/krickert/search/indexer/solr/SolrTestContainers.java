@@ -51,4 +51,11 @@ public class SolrTestContainers {
         return container9;
     }
 
+    @Override
+    public String toString() {
+        return "SolrTestContainers{" +
+                "container7=" + container7 +
+                ", container9=" + container9 +
+                '}';
+    }
 }

@@ -1,5 +1,6 @@
 package com.krickert.search.indexer;
 
+import com.google.api.Http;
 import io.micronaut.http.HttpRequest;
 import io.micronaut.http.HttpResponse;
 import io.micronaut.http.client.HttpClient;
@@ -27,5 +28,9 @@ public class SolrDynamicClient {
     public HttpResponse<String> deleteCollection(String solrURL, String collectionName) throws HttpClientResponseException {
         String collectionAPI = "/admin/collections?action=DELETE&name=" + collectionName;
         return httpClient.toBlocking().exchange(HttpRequest.GET(solrURL + collectionAPI), String.class);
+    }
+
+    public HttpResponse<String> commit(String solrURL, String collectionName) throws HttpClientResponseException {
+        return sendJsonToSolr(solrURL, collectionName, "{ \"commit\": {} }");
     }
 }

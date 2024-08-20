@@ -47,7 +47,8 @@ public class IndexerConfigurationTest {
 
         SolrConfiguration.Connection sourceConnection = sourceConfig.getConnection();
         Assertions.assertNotNull(sourceConnection);
-        Assertions.assertEquals("http://localhost:8983/solr", sourceConnection.getUrl());
+        String connectionUrl = sourceConnection.getUrl();
+        testConnectionString(connectionUrl, sourceConnection);
         Assertions.assertNotNull(sourceConnection.getAuthentication());
         Assertions.assertFalse(sourceConnection.getAuthentication().isEnabled());
 
@@ -55,10 +56,11 @@ public class IndexerConfigurationTest {
         Assertions.assertNotNull(destConfig);
         Assertions.assertEquals("9.6.1", destConfig.getVersion());
         Assertions.assertEquals("destination_collection", destConfig.getCollection());
+        Assertions.assertEquals("classpath:semantic_example.zip", destConfig.getCollectionConfigFile());
 
         SolrConfiguration.Connection destConnection = destConfig.getConnection();
         Assertions.assertNotNull(destConnection);
-        Assertions.assertEquals("http://localhost:8983/solr", destConnection.getUrl());
+        testConnectionString(destConnection.getUrl(), destConnection);
         Assertions.assertNotNull(destConnection.getAuthentication());
         
         SolrConfiguration.Connection.Authentication destAuth = destConnection.getAuthentication();
@@ -93,5 +95,12 @@ public class IndexerConfigurationTest {
         Assertions.assertEquals("body_vector", bodyConfig.getDestinationCollection());
         Assertions.assertTrue(bodyConfig.isDestinationCollectionCreate());
         Assertions.assertEquals("title_mini_lm", bodyConfig.getDestinationCollectionVectorFieldName());
+    }
+
+    private static void testConnectionString(String connectionUrl, SolrConfiguration.Connection sourceConnection) {
+        Assertions.assertTrue(connectionUrl.startsWith("http://localhost:"));
+        Assertions.assertTrue(connectionUrl.endsWith("/solr"));
+        String port = sourceConnection.getUrl().replaceAll(".*:(\\d+).*", "$1");
+        Assertions.assertEquals("http://localhost:" + Integer.parseInt(port) + "/solr", connectionUrl);
     }
 }

@@ -8,7 +8,6 @@ import org.apache.solr.client.solrj.SolrClient;
 import org.apache.solr.client.solrj.SolrServerException;
 import org.apache.solr.client.solrj.request.CollectionAdminRequest;
 import org.apache.solr.client.solrj.request.ConfigSetAdminRequest;
-import org.apache.solr.client.solrj.request.CoreAdminRequest;
 import org.apache.solr.client.solrj.request.GenericSolrRequest;
 import org.apache.solr.client.solrj.response.*;
 import org.apache.solr.common.params.ModifiableSolrParams;
@@ -25,7 +24,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 @Singleton
 public class SolrAdminActions {
@@ -39,7 +37,6 @@ public class SolrAdminActions {
         this.solrClient = solrClient;
         this.resourceLoader = resourceLoader;
         assert solrClient != null;
-        assert isSolrServerAlive();
     }
 
     /**
@@ -52,7 +49,7 @@ public class SolrAdminActions {
             SolrPingResponse pingResponse = solrClient.ping();
             return pingResponse.getStatus() == 0;
         } catch (SolrServerException | IOException e) {
-            e.printStackTrace();
+            log.error("Exception thrown", e);
             return false;
         }
     }

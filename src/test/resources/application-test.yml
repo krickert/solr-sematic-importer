@@ -23,6 +23,7 @@ solr-config:
   destination:
     version: 9.6.1
     collection: destination_collection
+    collection_config_file: "classpath:semantic_example.zip"
     connection:
       url: http://localhost:${solr9-test-port}/solr
       authentication:

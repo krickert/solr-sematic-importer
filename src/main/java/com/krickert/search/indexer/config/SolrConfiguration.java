@@ -11,6 +11,7 @@
        private String name;
        private String version;
        private String collection;
+       private String collectionConfigFile;
        private Connection connection;
 
        public SolrConfiguration(@Parameter("name") String name) {
@@ -18,7 +19,13 @@
        }
 
        // Getters and Setters
+       public String getCollectionConfigFile() {
+           return collectionConfigFile;
+       }
 
+       public void setCollectionConfigFile(String collectionConfigFile) {
+           this.collectionConfigFile = collectionConfigFile;
+       }
        public String getName() {
            return name;
        }

@@ -25,11 +25,20 @@ public class HttpSolrSelectClientImpl implements HttpSolrSelectClient {
     }
 
     @Override
+    public String getSolrDocs(String solrHost, String solrCollection, Integer paginationSize, Integer pageNumber) {
+        return simpleGetRequest.getResponseAsString(createSolrRequest(solrHost, solrCollection, paginationSize, pageNumber));
+    }
+
+    @Override
     public String getSolrDocs(Integer paginationSize, Integer pageNumber) throws IOException, InterruptedException {
-        return simpleGetRequest.getResponseAsString(createSolrRequest(paginationSize, pageNumber));
+        return simpleGetRequest.getResponseAsString(createSolrRequest(solrHost, solrCollection, paginationSize, pageNumber));
     }
 
     private String createSolrRequest(Integer paginationSize, Integer pageNumber) {
+        return createSolrRequest(solrHost, solrCollection, paginationSize, pageNumber);
+    }
+
+    private String createSolrRequest(String solrHost, String solrCollection, Integer paginationSize, Integer pageNumber) {
         return solrHost + "/" + solrCollection + "/select?q=*:*&wt=json&start=" + pageNumber * paginationSize + "&rows=" + paginationSize;
     }
 }

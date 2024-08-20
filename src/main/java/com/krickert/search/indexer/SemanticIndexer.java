@@ -35,6 +35,9 @@ import java.io.IOException;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.file.Paths;
+import java.time.Instant;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -69,9 +72,17 @@ public class SemanticIndexer {
         return messages;
     }
 
-
     public void exportSolrDocsFromExternalSolrCollection(Integer paginationSize) {
-        SolrClient solrClient = createSolr9Client();
+        exportSolrDocsFromExternalSolrCollection(
+                indexerConfiguration.getSourceSolrConfiguration().getConnection().getUrl(),
+                indexerConfiguration.getDestinationSolrConfiguration().getConnection().getUrl(),
+                indexerConfiguration.getSourceSolrConfiguration().getCollection(),
+                indexerConfiguration.getDestinationSolrConfiguration().getCollection(),
+                paginationSize);
+    }
+
+    public void exportSolrDocsFromExternalSolrCollection(String solr7Host, String solr9Host, String solrSourceCollection, String solrDestinationCollection, Integer paginationSize) {
+        SolrClient solrClient = createSolr9Client(solr9Host, solrDestinationCollection);
         //ensures that the vector configuration is there.  If it's not, then it will
         //add a default configuration that comes with the app.
         setupSolr9Config(solrClient, indexerConfiguration.getDestinationSolrConfiguration());
@@ -85,19 +96,23 @@ public class SemanticIndexer {
         long totalExpected = -1;
         long numOfPagesExpected = -1;
         while (numOfPagesExpected != currentPage) {
-            String solrDocs = null;
-            try {
-                solrDocs = httpSolrSelectClient.getSolrDocs(paginationSize, currentPage++);
-            } catch (IOException | InterruptedException e) {
-                throw new RuntimeException(e);
-            }
+            String solrDocs = httpSolrSelectClient.getSolrDocs(solr7Host, solrSourceCollection, paginationSize, currentPage++);
             HttpSolrSelectResponse response = jsonToSolrDoc.parseSolrDocuments(solrDocs);
+            if (response.getNumFound() == 0) {
+                log.info("No solr documents in source collection. Breaking");
+                break;
+            }
             if (totalExpected == -1) {
                 totalExpected = response.getNumFound();
                 numOfPagesExpected = (response.getNumFound() / paginationSize) + 1;
             }
-
             try {
+                Collection<SolrInputDocument> documents = response.getDocs();
+                if (response.getDocs().isEmpty()){
+                    break;
+                }
+                log.info("Exporting {} documents from source collection {} to destination collection {}", documents.size(), solrSourceCollection, solrDestinationCollection);
+                documents.forEach(doc -> convertSolrArrayLongToDate(doc, "creation_date"));
                 solrClient.add(response.getDocs());
             } catch (SolrServerException | IOException e) {
                 throw new RuntimeException(e);
@@ -109,6 +124,23 @@ public class SemanticIndexer {
         } catch (SolrServerException | IOException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    private static void convertSolrArrayLongToDate(SolrInputDocument doc, String fieldName) {
+        // Retrieve the creation_date field
+        @SuppressWarnings("unchecked")
+        Long creationDate = (Long) doc.getFieldValue(fieldName);
+        // Update the Solr document with the converted date strings
+        doc.setField("creation_date", convertToSolrDateString(creationDate));
+;
+    }
+    private static final DateTimeFormatter solrDateFormat = DateTimeFormatter
+            .ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'")
+            .withZone(ZoneOffset.UTC);
+
+    private static String convertToSolrDateString(long timestamp) {
+        Instant instant = Instant.ofEpochMilli(timestamp);
+        return solrDateFormat.format(instant);
     }
 
     private void setupSolr9VectorCollections(Map<String, VectorConfig> vectorConfig, SolrConfiguration destinationSolrConfiguration) {
@@ -124,7 +156,7 @@ public class SemanticIndexer {
 
         ConfigSetAdminRequest.Upload request = new ConfigSetAdminRequest.Upload();
         request.setConfigSetName("semantic_default_config");
-        Optional<URL> resource = resourceLoader.getResource("classpath:semantic_base_config.zip");
+        Optional<URL> resource = resourceLoader.getResource(destinationSolrConfiguration.getCollectionConfigFile());
         final File file;
         try {
             file = Paths.get(resource.get().toURI()).toFile();
@@ -138,7 +170,7 @@ public class SemanticIndexer {
             response = request.process(solrClient);
             log.info("Configset semantic_base_config.zip uploaded successfully! {}", response);
         } catch (SolrServerException | IOException e) {
-            log.error("Failed to upload configset semantic_base_config.zip", e);
+            log.error("Failed to upload configset {}. Exception: {}", destinationSolrConfiguration.getCollectionConfigFile(), e.getMessage());
             throw new RuntimeException(e);
         }
 
@@ -178,10 +210,14 @@ public class SemanticIndexer {
 
     }
 
+    protected SolrClient createSolr9Client(String solrHost, String solrCollection) {
+        log.info("Base Solr URL: {}", solrHost);
+        return new Http2SolrClient.Builder(solrHost).withDefaultCollection(solrCollection).build();
+    }
 
     protected SolrClient createSolr9Client() {
         String baseUrl = indexerConfiguration.getDestinationSolrConfiguration().getConnection().getUrl();
         log.info("Base Solr URL: {}", baseUrl);
-        return new Http2SolrClient.Builder(baseUrl).withDefaultCollection(indexerConfiguration.getDestinationSolrConfiguration().getCollection()).build();
+        return createSolr9Client(baseUrl, indexerConfiguration.getDestinationSolrConfiguration().getCollection());
     }
 }
