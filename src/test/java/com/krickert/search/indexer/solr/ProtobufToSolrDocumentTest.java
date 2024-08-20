@@ -1,9 +1,7 @@
-package com.krickert.search.indexer.enhancers;
+package com.krickert.search.indexer.solr;
 
 import com.krickert.search.indexer.config.IndexerConfiguration;
-import com.krickert.search.indexer.solr.JsonToSolrDocParser;
-import com.krickert.search.indexer.SemanticIndexer;
-import com.krickert.search.indexer.solr.ProtobufSolrIndexer;
+import com.krickert.search.indexer.enhancers.ProtobufToSolrDocument;
 import com.krickert.search.model.pipe.PipeDocument;
 import com.krickert.search.model.test.util.TestDataHelper;
 import io.micronaut.core.io.ResourceLoader;
@@ -16,6 +14,7 @@ import org.apache.solr.client.solrj.impl.Http2SolrClient;
 import org.apache.solr.client.solrj.request.CollectionAdminRequest;
 import org.apache.solr.client.solrj.response.QueryResponse;
 import org.apache.solr.common.SolrInputDocument;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -29,6 +28,8 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.fail;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.spy;
 
 @MicronautTest
 public class ProtobufToSolrDocumentTest {
@@ -37,8 +38,20 @@ public class ProtobufToSolrDocumentTest {
     final ProtobufToSolrDocument unit;
     private final Collection<PipeDocument> pipeDocumentCollection;
     private final SolrContainer container9;
-    private final ProtobufSolrIndexer protobufSolrIndexer;
+    private ProtobufSolrIndexer protobufSolrIndexer;
     private final IndexerConfiguration indexerConfiguration;
+
+    @BeforeEach
+    void setUp() {
+        // Mock the behavior of createSolr9Client
+        // Assuming createSolr9Client is a method in SemanticIndexer
+
+        // Partial mock of the semanticIndexer to spy on it
+        protobufSolrIndexer = spy(protobufSolrIndexer);
+        SolrClient solr9Client = createSolr9Client();
+        // Override the createSolr9Client method
+        doReturn(solr9Client).when(protobufSolrIndexer).createSolr9Client();
+    }
 
     @Inject
     ProtobufToSolrDocumentTest(ProtobufToSolrDocument unit, ResourceLoader resourceLoader, ProtobufSolrIndexer protobufSolrIndexer, IndexerConfiguration indexerConfiguration) throws SolrServerException, IOException {
