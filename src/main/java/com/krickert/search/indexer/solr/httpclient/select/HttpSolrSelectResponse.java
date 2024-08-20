@@ -1,4 +1,4 @@
-package com.krickert.search.indexer.solr;
+package com.krickert.search.indexer.solr.httpclient.select;
 
 import org.apache.solr.common.SolrInputDocument;
 

@@ -1,8 +1,9 @@
 package com.krickert.search.indexer;
 
-import com.krickert.search.indexer.solr.HttpSolrSelectClient;
-import com.krickert.search.indexer.solr.HttpSolrSelectClientImpl;
-import com.krickert.search.indexer.solr.JsonToSolrDoc;
+import com.krickert.search.indexer.config.IndexerConfiguration;
+import com.krickert.search.indexer.solr.JsonToSolrDocParser;
+import com.krickert.search.indexer.solr.httpclient.select.HttpSolrSelectClient;
+import com.krickert.search.indexer.solr.httpclient.select.HttpSolrSelectClientImpl;
 import io.micronaut.core.io.ResourceLoader;
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
 import jakarta.inject.Inject;
@@ -47,6 +48,7 @@ public class SolrIndexerIntegrationTest {
     private final SolrContainer container7 = createContainer(SOLR7_IMAGE);
     private final SolrDynamicClient solrDynamicClient;
     private final ResourceLoader resourceLoader;
+    private final IndexerConfiguration indexerConfiguration;
     String[] docs =
             {
                     "Watermelons are red.",
@@ -62,9 +64,10 @@ public class SolrIndexerIntegrationTest {
 
 
     @Inject
-    public SolrIndexerIntegrationTest(SolrDynamicClient solrDynamicClient, ResourceLoader resourceLoader) {
+    public SolrIndexerIntegrationTest(SolrDynamicClient solrDynamicClient, ResourceLoader resourceLoader, IndexerConfiguration indexerConfiguration) {
         this.solrDynamicClient = solrDynamicClient;
         this.resourceLoader = resourceLoader;
+        this.indexerConfiguration = indexerConfiguration;
     }
 
     private SolrContainer createContainer(DockerImageName image) {
@@ -103,7 +106,7 @@ public class SolrIndexerIntegrationTest {
             HttpResponse<String> commitResponse = solrDynamicClient.sendJsonToSolr(sol7rUrl, testCollection, "{ \"commit\": {} }");
             assertEquals(200, commitResponse.code());
             String solrDocs = httpSolrSelectClient.getSolrDocs(10, 0);
-            JsonToSolrDoc jsonToSolrDoc = new JsonToSolrDoc();
+            JsonToSolrDocParser jsonToSolrDoc = new JsonToSolrDocParser();
             Collection<SolrInputDocument> docs = jsonToSolrDoc.parseSolrDocuments(solrDocs).getDocs();
             SolrClient solrClient = createSolr9Client();
             uploadConfigSet(solrClient);

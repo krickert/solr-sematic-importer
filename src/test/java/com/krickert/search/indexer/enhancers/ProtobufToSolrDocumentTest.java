@@ -1,6 +1,6 @@
 package com.krickert.search.indexer.enhancers;
 
-import com.krickert.search.indexer.solr.JsonToSolrDoc;
+import com.krickert.search.indexer.solr.JsonToSolrDocParser;
 import com.krickert.search.indexer.SemanticIndexer;
 import com.krickert.search.model.pipe.PipeDocument;
 import com.krickert.search.model.test.util.TestDataHelper;
@@ -47,7 +47,7 @@ public class ProtobufToSolrDocumentTest {
             solrClient.request(CollectionAdminRequest.createCollection(testCollection, "_default", 1, 1));
         }
         String solrDestinationUrl = "http://" + container9.getHost() + ":" + container9.getSolrPort() + "/solr";
-        this.semanticIndexer = new SemanticIndexer(unit, new MockSolrSelectClient(), new JsonToSolrDoc(), solrDestinationUrl, "test_collection");
+        this.semanticIndexer = new SemanticIndexer(unit, new MockSolrSelectClient(), new JsonToSolrDocParser(), solrDestinationUrl, "test_collection");
     }
 
     @Test

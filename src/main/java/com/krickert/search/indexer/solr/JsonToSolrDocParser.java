@@ -3,6 +3,7 @@ package com.krickert.search.indexer.solr;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.krickert.search.indexer.solr.httpclient.select.HttpSolrSelectResponse;
 import jakarta.inject.Singleton;
 import org.apache.solr.common.SolrInputDocument;
 import org.apache.solr.common.SolrInputField;
@@ -13,7 +14,7 @@ import java.util.List;
 import java.util.Map;
 
 @Singleton
-public class JsonToSolrDoc {
+public class JsonToSolrDocParser {
     ObjectMapper mapper = new ObjectMapper();
 
     public Collection<String> parseSolrDocumentsToJSON(String jsonString) {

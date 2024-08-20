@@ -1,32 +1,31 @@
-package com.krickert.search.indexer.solr;
+package com.krickert.search.indexer.solr.client;
 
+import io.micronaut.context.annotation.Bean;
+import io.micronaut.context.annotation.Factory;
 import io.micronaut.context.annotation.Value;
 import io.micronaut.http.HttpResponse;
 import io.micronaut.http.MediaType;
-import io.micronaut.http.annotation.Body;
-import io.micronaut.http.annotation.Post;
 import io.micronaut.http.client.HttpClient;
 import io.micronaut.http.client.annotation.Client;
-import io.micronaut.runtime.Micronaut;
 import jakarta.inject.Inject;
-import jakarta.inject.Singleton;
+import org.apache.solr.client.solrj.SolrClient;
 import org.apache.solr.client.solrj.impl.Http2SolrClient;
 import org.apache.solr.client.solrj.request.RequestWriter;
 import org.apache.solr.client.solrj.SolrRequest;
 import org.eclipse.jetty.http.HttpHeader;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.OutputStream;
-import java.net.URI;
-import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 
-@Singleton
+@Factory
 public class SolrClientService {
-
+    private static final Logger log = LoggerFactory.getLogger(SolrClientService.class);
     @Value("${indexer.destination.solr-connection.authentication.token-url}")
     private String tokenUrl;
 
@@ -40,13 +39,23 @@ public class SolrClientService {
     @Client("${indexer.destination.solr-connection.authentication.token-url}")
     HttpClient oktaHttpClient;
 
-    public Http2SolrClient createSolrClient(String solrUrl) throws InterruptedException, ExecutionException, TimeoutException {
+    public Http2SolrClient createOktaSolrClient(String solrUrl) throws InterruptedException, ExecutionException, TimeoutException {
         String accessToken = getOktaAccessToken();
 
         return new Http2SolrClient.Builder(solrUrl)
                 .withRequestWriter(new CustomRequestWriter(accessToken))
                 .build();
     }
+
+    @Bean
+    public SolrClient createSolrClient(String solrUrl, String collection) {
+        return new Http2SolrClient.Builder(solrUrl)
+                .withDefaultCollection(collection)
+                .withFollowRedirects(true)
+                .build();
+    }
+
+
 
     private String getOktaAccessToken() throws InterruptedException, ExecutionException, TimeoutException {
         Map<String, String> body = new HashMap<>();

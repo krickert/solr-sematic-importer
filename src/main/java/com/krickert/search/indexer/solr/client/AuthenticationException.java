@@ -1,4 +1,4 @@
-package com.krickert.search.indexer.solr;
+package com.krickert.search.indexer.solr.client;
 
 public class AuthenticationException extends RuntimeException {
     public AuthenticationException(String message) {

@@ -2,3 +2,8 @@ micronaut:
   application:
     name: solr-semantic-importer
 
+grpc:
+  client:
+    plaintext: true
+    max-retry-attempts: 10
+

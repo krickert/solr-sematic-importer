@@ -1,7 +1,7 @@
 package com.krickert.search.indexer;
 
-import com.krickert.search.indexer.solr.HttpSolrSelectResponse;
-import com.krickert.search.indexer.solr.JsonToSolrDoc;
+import com.krickert.search.indexer.solr.JsonToSolrDocParser;
+import com.krickert.search.indexer.solr.httpclient.select.HttpSolrSelectResponse;
 import org.apache.solr.common.SolrInputDocument;
 import org.junit.jupiter.api.Test;
 
@@ -22,7 +22,7 @@ public class JsonToSolrDocTest {
     @Test
     public void testParseSolrDocuments() {
         // Arrange
-        JsonToSolrDoc jsonToSolrDoc = new JsonToSolrDoc();
+        JsonToSolrDocParser jsonToSolrDoc = new JsonToSolrDocParser();
         String jsonString =  "{" +
                 "  \"responseHeader\":{\n" +
                 "    \"status\":0,\n" +
@@ -80,7 +80,7 @@ public class JsonToSolrDocTest {
     @Test
     public void testParseSolrDocumentsWithInvalidJson() {
         // Arrange
-        JsonToSolrDoc jsonToSolrDoc = new JsonToSolrDoc();
+        JsonToSolrDocParser jsonToSolrDoc = new JsonToSolrDocParser();
         String invalidJsonString = "This is not a valid JSON string.";
 
         // Act & Assert

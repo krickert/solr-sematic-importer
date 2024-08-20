@@ -2,10 +2,11 @@ package com.krickert.search.indexer;
 
 import com.google.protobuf.DynamicMessage;
 import com.google.protobuf.Message;
+import com.krickert.search.indexer.config.IndexerConfiguration;
 import com.krickert.search.indexer.enhancers.ProtobufToSolrDocument;
-import com.krickert.search.indexer.solr.HttpSolrSelectClient;
-import com.krickert.search.indexer.solr.HttpSolrSelectResponse;
-import com.krickert.search.indexer.solr.JsonToSolrDoc;
+import com.krickert.search.indexer.solr.JsonToSolrDocParser;
+import com.krickert.search.indexer.solr.httpclient.select.HttpSolrSelectClient;
+import com.krickert.search.indexer.solr.httpclient.select.HttpSolrSelectResponse;
 import com.krickert.search.model.pipe.PipeDocument;
 import io.micronaut.context.annotation.Value;
 import jakarta.inject.Inject;
@@ -29,14 +30,14 @@ public class SemanticIndexer {
 
     private final ProtobufToSolrDocument protobufToSolrDocument;
     private final HttpSolrSelectClient httpSolrSelectClient;
-    private final JsonToSolrDoc jsonToSolrDoc;
+    private final JsonToSolrDocParser jsonToSolrDoc;
     private final String solrDestinationUrl;
     private final String solrDestinationCollection;
 
     @Inject
-    public SemanticIndexer(ProtobufToSolrDocument protobufToSolrDocument, HttpSolrSelectClient httpSolrSelectClient, JsonToSolrDoc jsonToSolrDoc,
-                           @Value("${indexer.destination.solr-connection.url}") String solrDestinationUrl,
-                           @Value("${indexer.destination.solr-collection}") String solrDestinationCollection) {
+    public SemanticIndexer(ProtobufToSolrDocument protobufToSolrDocument, HttpSolrSelectClient httpSolrSelectClient, JsonToSolrDocParser jsonToSolrDoc,
+                           @Value("${solr-config.destination.connection.url}") String solrDestinationUrl,
+                           @Value("${solr-config.destination.collection}") String solrDestinationCollection) {
         this.protobufToSolrDocument = protobufToSolrDocument;
         this.httpSolrSelectClient = httpSolrSelectClient;
         this.jsonToSolrDoc = jsonToSolrDoc;
@@ -74,6 +75,7 @@ public class SemanticIndexer {
 
     public void exportSolrDocsFromExternalSolrCollection(Integer paginationSize) throws IOException, InterruptedException {
         SolrClient solrClient = createSolr9Client();
+        setupSolr9Collections(solrClient);
         if (paginationSize == null || paginationSize <= 0) {
             throw new IllegalArgumentException("paginationSize must be greater than 0");
         }
@@ -99,6 +101,11 @@ public class SemanticIndexer {
         } catch (SolrServerException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    private void setupSolr9Collections(SolrClient solrClient) {
+
+
     }
 
     private SolrClient createSolr9Client() {

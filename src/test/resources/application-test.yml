@@ -1,21 +1,26 @@
 micronaut:
   environment:
     - test
+
 indexer:
+  vector-grpc-channel: "localhost:${grpc-test-client-config.vectorizer.grpc-test-port}"
+  chunker-grpc-channel: "localhost:${grpc-test-client-config.chunker.grpc-test-port}"
+  source-seed-data:
+    enabled: false
+    seed-json-file: sample_solr_result.json
+
+solr-config:
   source:
-    solr-version: 7.7.3
-    solr-collection: source_collection
-    seed-data:
-      enabled: false
-      seed-json-file: sample_solr_result.json
-    solr-connection:
+    version: 7.7.3
+    collection: source_collection
+    connection:
       url: http://localhost:8983/solr
       authentication:
         enabled: false
   destination:
-    solr-version: 9.6.1
-    solr-collection: destination_collection
-    solr-connection:
+    version: 9.6.1
+    collection: destination_collection
+    connection:
       url: http://localhost:8983/solr
       authentication:
         enabled: true
@@ -25,6 +30,7 @@ indexer:
         issuer: https://my-token-url.com/oauth2/some-token/v1/token
         issuerAuthId: issuer-auth-id
         subject: your-subject
+
 vector-config:
   title:
     chunk-overlap: 30
@@ -42,3 +48,22 @@ vector-config:
     destination-collection: body_vector
     destination-collection-create: true
     destination-collection-vector-field-name: title_mini_lm
+
+
+
+grpc-test-client-config:
+  chunker:
+    grpc-test-port: ${random.port}
+    grpc-mapped-port: 50403
+    rest-test-port: ${random.port}
+    rest-mapped-port: 60403
+    docker-image-name: krickert/chunker:1.0-SNAPSHOT
+
+  vectorizer:
+    grpc-test-port: ${random.port}
+    grpc-mapped-port: 50401
+    rest-test-port: ${random.port}
+    rest-mapped-port: 60401
+    docker-image-name: krickert/vectorizer:1.0-SNAPSHOT
+
+solr-test-port: ${random.port}

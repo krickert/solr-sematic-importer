@@ -36,9 +36,7 @@ public class SolrSemanticImporterCommand implements Runnable {
                 System.out.println("Done!");
                 System.exit(0);
             }
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        } catch (InterruptedException e) {
+        } catch (IOException | InterruptedException e) {
             throw new RuntimeException(e);
         }
     }

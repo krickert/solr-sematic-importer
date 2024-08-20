@@ -1,4 +1,4 @@
-package com.krickert.search.indexer.solr;
+package com.krickert.search.indexer.solr.httpclient.select;
 
 import com.krickert.search.indexer.SimpleGetRequest;
 import io.micronaut.context.annotation.Value;
@@ -17,8 +17,8 @@ public class HttpSolrSelectClientImpl implements HttpSolrSelectClient {
 
     @Inject
     public HttpSolrSelectClientImpl(SimpleGetRequest simpleGetRequest,
-                                    @Value("${indexer.source.solr-connection.url}") String solrHost,
-                                    @Value("${indexer.source.solr-collection}") String solrCollection) {
+                                    @Value("${solr-config.source.connection.url}") String solrHost,
+                                    @Value("${solr-config.source.collection}") String solrCollection) {
         this.simpleGetRequest = checkNotNull(simpleGetRequest, "get request failed to load");
         this.solrHost = checkNotNull(solrHost, "solr host is needed");
         this.solrCollection = checkNotNull(solrCollection, "solr collection is needed");
