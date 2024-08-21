@@ -2,6 +2,7 @@ package com.krickert.search.indexer;
 
 import com.krickert.search.indexer.config.IndexerConfiguration;
 import com.krickert.search.indexer.enhancers.ProtobufToSolrDocument;
+import com.krickert.search.indexer.grpc.ClientGrpcTestContainers;
 import com.krickert.search.indexer.solr.JsonToSolrDocParser;
 import com.krickert.search.indexer.solr.SolrDocumentConverter;
 import com.krickert.search.indexer.solr.SolrTestContainers;
@@ -56,6 +57,7 @@ public class SolrIndexerIntegrationTest {
     private static final Logger log = LoggerFactory.getLogger(SolrIndexerIntegrationTest.class);
 
 
+    private final ClientGrpcTestContainers clientGrpcTestContainers;
     private final SolrDynamicClient solrDynamicClient;
     private final ResourceLoader resourceLoader;
     private SemanticIndexer semanticIndexer;
@@ -80,12 +82,13 @@ public class SolrIndexerIntegrationTest {
 
     @Inject
     public SolrIndexerIntegrationTest(
-            SolrDynamicClient solrDynamicClient,
+            ClientGrpcTestContainers clientGrpcTestContainers, SolrDynamicClient solrDynamicClient,
             ResourceLoader resourceLoader,
             SemanticIndexer semanticIndexer,
             IndexerConfiguration indexerConfiguration,
             SolrTestContainers solrTestContainers,
             SolrAdminTaskClient adminTaskClient) {
+        this.clientGrpcTestContainers = clientGrpcTestContainers;
         this.solrDynamicClient = solrDynamicClient;
         this.resourceLoader = resourceLoader;
         this.semanticIndexer = semanticIndexer;

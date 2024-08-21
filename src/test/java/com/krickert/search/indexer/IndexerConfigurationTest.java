@@ -78,20 +78,19 @@ public class IndexerConfigurationTest {
 
         VectorConfig titleConfig = vectorConfigMap.get("title");
         Assertions.assertNotNull(titleConfig);
-        Assertions.assertEquals(30, titleConfig.getChunkOverlap());
-        Assertions.assertEquals(300, titleConfig.getChunkSize());
+        //Titles don't chunk and nor should you
+        Assertions.assertNull(titleConfig.getChunkOverlap());
+        Assertions.assertNull(titleConfig.getChunkSize());
         Assertions.assertEquals("mini-LM", titleConfig.getModel());
-        Assertions.assertEquals(384, titleConfig.getDimensions());
-        Assertions.assertEquals("title_vector", titleConfig.getDestinationCollection());
-        Assertions.assertTrue(titleConfig.isDestinationCollectionCreate());
-        Assertions.assertEquals("title_mini_lm", titleConfig.getDestinationCollectionVectorFieldName());
-
+        Assertions.assertNull(titleConfig.getDestinationCollection());
+        Assertions.assertNull(titleConfig.isDestinationCollectionCreate());
+        Assertions.assertNull(titleConfig.getDestinationCollectionVectorFieldName());
+        Assertions.assertFalse(titleConfig.getChunkField());
         VectorConfig bodyConfig = vectorConfigMap.get("body");
         Assertions.assertNotNull(bodyConfig);
         Assertions.assertEquals(30, bodyConfig.getChunkOverlap());
         Assertions.assertEquals(300, bodyConfig.getChunkSize());
         Assertions.assertEquals("mini-LM", bodyConfig.getModel());
-        Assertions.assertEquals(384, bodyConfig.getDimensions());
         Assertions.assertEquals("body_vector", bodyConfig.getDestinationCollection());
         Assertions.assertTrue(bodyConfig.isDestinationCollectionCreate());
         Assertions.assertEquals("title_mini_lm", bodyConfig.getDestinationCollectionVectorFieldName());

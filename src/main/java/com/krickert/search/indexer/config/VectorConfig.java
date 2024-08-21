@@ -7,15 +7,15 @@ import io.micronaut.core.annotation.Introspected;
 @Introspected
 public class VectorConfig {
 
-    private int chunkOverlap;
-    private int chunkSize;
+    private Integer chunkOverlap;
+    private Integer chunkSize;
+    private Boolean chunkField;
     private String model;
-    private int dimensions;
     private String destinationCollection;
-    private boolean destinationCollectionCreate;
+    private Boolean destinationCollectionCreate;
     private String destinationCollectionVectorFieldName;
 
-    public int getChunkOverlap() {
+    public Integer getChunkOverlap() {
         return chunkOverlap;
     }
 
@@ -23,12 +23,20 @@ public class VectorConfig {
         this.chunkOverlap = chunkOverlap;
     }
 
-    public int getChunkSize() {
+    public Integer getChunkSize() {
         return chunkSize;
     }
 
     public void setChunkSize(int chunkSize) {
         this.chunkSize = chunkSize;
+    }
+
+    public Boolean getChunkField() {
+        return chunkField;
+    }
+
+    public void setChunkField(Boolean chunkField) {
+        this.chunkField = chunkField;
     }
 
     public String getModel() {
@@ -39,14 +47,6 @@ public class VectorConfig {
         this.model = model;
     }
 
-    public int getDimensions() {
-        return dimensions;
-    }
-
-    public void setDimensions(int dimensions) {
-        this.dimensions = dimensions;
-    }
-
     public String getDestinationCollection() {
         return destinationCollection;
     }
@@ -55,7 +55,7 @@ public class VectorConfig {
         this.destinationCollection = destinationCollection;
     }
 
-    public boolean isDestinationCollectionCreate() {
+    public Boolean isDestinationCollectionCreate() {
         return destinationCollectionCreate;
     }
 

@@ -11,6 +11,7 @@ import com.krickert.search.indexer.solr.JsonToSolrDocParser;
 import com.krickert.search.indexer.solr.client.SolrAdminActions;
 import com.krickert.search.indexer.solr.httpclient.select.HttpSolrSelectClient;
 import com.krickert.search.indexer.solr.httpclient.select.HttpSolrSelectResponse;
+import com.krickert.search.indexer.solr.vector.CreateVectorCollectionService;
 import com.krickert.search.model.pipe.PipeDocument;
 import io.micronaut.core.io.ResourceLoader;
 import jakarta.inject.Inject;
@@ -50,14 +51,21 @@ public class SemanticIndexer {
     private final JsonToSolrDocParser jsonToSolrDoc;
     private final IndexerConfiguration indexerConfiguration;
     private final SolrAdminActions solrAdminActions;
+    private final CreateVectorCollectionService createVectorCollectionService;
     ResourceLoader resourceLoader;
 
     @Inject
-    public SemanticIndexer(HttpSolrSelectClient httpSolrSelectClient, JsonToSolrDocParser jsonToSolrDoc, IndexerConfiguration indexerConfiguration, SolrAdminActions solrAdminActions, ResourceLoader resourceLoader) {
+    public SemanticIndexer(HttpSolrSelectClient httpSolrSelectClient,
+                           JsonToSolrDocParser jsonToSolrDoc,
+                           IndexerConfiguration indexerConfiguration,
+                           SolrAdminActions solrAdminActions,
+                           CreateVectorCollectionService createVectorCollectionService,
+                           ResourceLoader resourceLoader) {
         this.httpSolrSelectClient = httpSolrSelectClient;
         this.jsonToSolrDoc = jsonToSolrDoc;
         this.indexerConfiguration = indexerConfiguration;
         this.solrAdminActions = solrAdminActions;
+        this.createVectorCollectionService = createVectorCollectionService;
         this.resourceLoader = resourceLoader;
     }
 
@@ -112,7 +120,10 @@ public class SemanticIndexer {
                     break;
                 }
                 log.info("Exporting {} documents from source collection {} to destination collection {}", documents.size(), solrSourceCollection, solrDestinationCollection);
-                documents.forEach(doc -> convertSolrArrayLongToDate(doc, "creation_date"));
+                documents.forEach(doc -> {
+                    convertSolrArrayLongToDate(doc, "creation_date");
+                    createVectorCollectionService.addVectorFieldToDocument(doc, "title");
+                });
                 solrClient.add(response.getDocs());
             } catch (SolrServerException | IOException e) {
                 throw new RuntimeException(e);

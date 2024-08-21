@@ -1,9 +1,13 @@
 micronaut:
   application:
     name: solr-semantic-importer
-
+  http:
+    services:
+      grpc-services:
+        retry:
+          attempts: 5
+          delay: 500ms
 grpc:
   client:
     plaintext: true
-    max-retry-attempts: 10
-
+    enable-retry: true
