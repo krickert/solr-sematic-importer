@@ -4,6 +4,7 @@ import com.krickert.search.indexer.config.IndexerConfiguration;
 import com.krickert.search.indexer.config.VectorConfig;
 import com.krickert.search.indexer.solr.index.SolrInputDocumentQueue;
 import com.krickert.search.service.*;
+import io.micronaut.retry.annotation.Retryable;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 import org.apache.commons.lang3.StringUtils;
@@ -150,17 +151,21 @@ public class SolrVectorIndexingService {
         }
         return chunkDocuments;
     }
+
+    @Retryable(attempts = "3", delay = "1s", multiplier = "2.0", includes = {io.grpc.StatusRuntimeException.class})
     protected ChunkReply getChunks(ChunkRequest request) {
         return chunkServiceBlockingStub.chunk(request);
     }
 
 
 
+    @Retryable(attempts = "3", delay = "1s", multiplier = "2.0", includes = {io.grpc.StatusRuntimeException.class})
     protected EmbeddingsVectorReply getEmbeddingsVectorReply(String fieldData) {
         return embeddingServiceBlockingStub.createEmbeddingsVector(EmbeddingsVectorRequest.newBuilder().setText(fieldData).build());
     }
 
 
+    @Retryable(attempts = "3", delay = "1s", multiplier = "2.0", includes = {io.grpc.StatusRuntimeException.class})
     protected EmbeddingsVectorsReply getEmbeddingsVectorsReply(List<String> fieldDataList) {
         return embeddingServiceBlockingStub.createEmbeddingsVectors(EmbeddingsVectorsRequest.newBuilder().addAllText(fieldDataList).build());
     }

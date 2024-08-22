@@ -9,6 +9,7 @@ import jakarta.inject.Singleton;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.solr.client.solrj.SolrClient;
 import org.apache.solr.client.solrj.SolrServerException;
+import org.apache.solr.client.solrj.impl.BaseHttpSolrClient;
 import org.apache.solr.client.solrj.request.CollectionAdminRequest;
 import org.apache.solr.client.solrj.request.ConfigSetAdminRequest;
 import org.apache.solr.client.solrj.request.GenericSolrRequest;
@@ -79,15 +80,11 @@ public class SolrAdminActions {
      */
     public boolean doesCollectionExist(String collectionName, SolrClient solrClient) {
         try {
-            CollectionAdminRequest.List listRequest = new CollectionAdminRequest.List();
-            CollectionAdminResponse response = listRequest.process(solrClient);
-            NamedList<NamedList<Object>> collections = response.getCollectionStatus();
-            if (collections == null) {
-                return false;
-            }
-            return collections.asShallowMap().containsValue(collectionName);
-        } catch (SolrServerException | IOException e) {
-            log.error("Exception thrown", e);
+            solrClient.ping(collectionName);
+            log.info("collection {} exists", collectionName);
+            return true;
+        } catch (BaseHttpSolrClient.RemoteSolrException | SolrServerException | IOException e) {
+            log.info("collection {} does not exist", collectionName);
             return false;
         }
     }

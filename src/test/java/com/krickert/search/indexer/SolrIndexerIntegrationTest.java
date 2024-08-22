@@ -80,7 +80,7 @@ public class SolrIndexerIntegrationTest {
 
     private SolrClient createSolr9Client() {
         String baseSolrUrl = "http://" + container9.getHost() + ":" + container9.getSolrPort() + "/solr";
-        log.info("Base Solr URL: {}", baseSolrUrl);
+        log.info("Solr 9 URL: {}", baseSolrUrl);
         return new Http2SolrClient.Builder(baseSolrUrl).build();
     }
 
