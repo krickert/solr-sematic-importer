@@ -1,10 +1,14 @@
 micronaut:
   environment:
     - test
+  executors:
+    solr-source-fetch-executor:
+      type: fixed
+      nThreads: 50
+      parallelism: 20
 
 solr9-test-port: ${random.port}
 solr7-test-port: ${random.port}
-
 indexer:
   vector-grpc-channel: "localhost:${grpc-test-client-config.vectorizer.grpc-test-port}"
   chunker-grpc-channel: "localhost:${grpc-test-client-config.chunker.grpc-test-port}"
@@ -50,15 +54,23 @@ vector-config:
   title:
     chunk-field: false
     model: mini-LM
+    chunk-field-vector-name: title-vector
+    similarity-function: cosine #cosine, dot_product, or euclidean.  Defaults to dot_product
+    hnsw-max-connections: 16 #if not filled out, this will default to 16
+    hnsw-beam-width: 100 #if not filled out, this will default to 100
+
   body:
     chunk-field: true
     chunk-overlap: 30
     chunk-size: 300
     model: mini-LM
-    destination-collection: body_vectors
+    destination-collection: body-vectors
     chunk-field-vector-name: body-chunk-vector
+    similarity-function: cosine #cosine, dot_product, or euclidean.  Defaults to dot_product
+    hnsw-max-connections: 16 #if not filled out, this will default to 16
+    hnsw-beam-width: 100 #if not filled out, this will default to 100
     collection_creation:
-      collection_config_file: "classpath:default_base_config.zip"
+      collection_config_file: "classpath:default-chunk-config.zip"
       collection_config_name: vector_config
       number_of_shards: 1
       number_of_replicas: 2
@@ -79,3 +91,7 @@ grpc-test-client-config:
     rest-mapped-port: 60401
     docker-image-name: krickert/vectorizer:1.0-SNAPSHOT
 
+grpc:
+  client:
+    enable-retry: true
+    max-inbound-message-size: 76800000

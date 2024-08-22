@@ -38,6 +38,10 @@ public class ClientGrpcTestContainers {
 
         GenericContainer<?> container = new GenericContainer<>(imageName)
                 .withExposedPorts(config.getGrpcMappedPort(), config.getRestMappedPort())
+                .withEnv("MY_ENV_VAR", "my-value")
+                .withEnv("JAVA_OPTS", "-Xmx5g")
+                .withEnv("MICRONAUT_SERVER_NETTY_THREADS", "1000") // Set Netty event loop threads
+                .withEnv("MICRONAUT_EXECUTORS_DEFAULT_THREADS", "500")
                 .withCreateContainerCmdModifier(cmd -> configureContainer(cmd, config));
 
         try {
@@ -61,6 +65,8 @@ public class ClientGrpcTestContainers {
 
     private void configureContainer(CreateContainerCmd cmd, GrpcClientConfig config) {
         HostConfig hostConfig = HostConfig.newHostConfig()
+                .withMemory(1024 * 1024 * 1024L)
+                .withMemorySwap(1024 * 1024 * 1024L)
                 .withPortBindings(
                         new PortBinding(Ports.Binding.bindPort(config.getGrpcTestPort()),
                                 new ExposedPort(config.getGrpcMappedPort())),

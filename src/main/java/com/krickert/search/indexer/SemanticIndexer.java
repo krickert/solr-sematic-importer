@@ -12,6 +12,7 @@ import com.krickert.search.indexer.solr.vector.SolrVectorIndexingService;
 import com.krickert.search.model.pipe.PipeDocument;
 import io.micronaut.core.io.ResourceLoader;
 import jakarta.inject.Inject;
+import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import org.apache.solr.common.SolrInputDocument;
 import org.slf4j.Logger;
@@ -21,6 +22,11 @@ import java.time.Instant;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.IntStream;
 
 @Singleton
 public class SemanticIndexer {
@@ -35,13 +41,15 @@ public class SemanticIndexer {
     private final SolrAdminActions solrAdminActions;
     ResourceLoader resourceLoader;
 
+
     @Inject
     public SemanticIndexer(HttpSolrSelectClient httpSolrSelectClient,
                            JsonToSolrDocParser jsonToSolrDoc,
                            IndexerConfiguration indexerConfiguration,
                            SolrDestinationCollectionValidationService solrDestinationCollectionValidationService,
                            SolrVectorIndexingService createVectorCollectionService,
-                           ResourceLoader resourceLoader, SolrAdminActions solrAdminActions) {
+                           ResourceLoader resourceLoader,
+                           SolrAdminActions solrAdminActions) {
         this.httpSolrSelectClient = httpSolrSelectClient;
         this.jsonToSolrDoc = jsonToSolrDoc;
         this.indexerConfiguration = indexerConfiguration;
@@ -75,8 +83,8 @@ public class SemanticIndexer {
                                                          String solrDestinationCollection,
                                                          Integer paginationSize) {
         // Validate the destination collection
+        AtomicInteger pagesProcessed = new AtomicInteger(0);
         solrDestinationCollectionValidationService.validate();
-
         //create the crawler ID.  This will be saved in the collection and documents
         //that are not matching this crawler ID will be deleted
         UUID crawlId = UUID.randomUUID();
@@ -85,38 +93,45 @@ public class SemanticIndexer {
             throw new IllegalArgumentException("paginationSize must be greater than 0");
         }
 
-        int currentPage = 0;
-        long totalExpected = -1;
-        long numOfPagesExpected = 0; // Initialize to 0, since we'll calculate it after the first fetch.
+        long totalExpected = httpSolrSelectClient.getTotalNumberOfDocumentsForCollection(solr7Host, solrSourceCollection);
+        assert totalExpected >= 0;
+        long numOfPagesExpected = calculateNumOfPages(totalExpected, paginationSize);
+        assert numOfPagesExpected >= 0;
+        List<CompletableFuture<Void>> futures = IntStream.range(0, (int) numOfPagesExpected)
+                .mapToObj(currentPage -> CompletableFuture.runAsync(
+                        () -> processPages(solr7Host, solrSourceCollection, solrDestinationCollection, paginationSize, currentPage, crawlId, pagesProcessed))
+                )
+                .toList();
 
-        do {
-            String solrDocs = fetchSolrDocuments(solr7Host, solrSourceCollection, paginationSize, currentPage++);
-            HttpSolrSelectResponse response = jsonToSolrDoc.parseSolrDocuments(solrDocs);
-
-            if (isEmptyResponse(response)) {
-                log.info("No solr documents in source collection. Breaking.");
-                break;
-            }
-
-            // Set totalExpected and numOfPagesExpected after fetching the first batch of documents
-            if (totalExpected == -1) {
-                totalExpected = response.getNumFound();
-                numOfPagesExpected = calculateNumOfPages(totalExpected, paginationSize);
-            }
-
-            Collection<SolrInputDocument> documents = response.getDocs();
-
-            if (documents.isEmpty()) {
-                break;
-            }
-
-            log.info("Exporting {} documents from source collection {} to destination collection {}", documents.size(), solrSourceCollection, solrDestinationCollection);
-            processDocuments(documents, crawlId);
-
-        } while (currentPage < numOfPagesExpected);
-
+        // Wait for all pages to be processed
+        CompletableFuture<Void> allOf = CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]));
+        try {
+            allOf.get();
+        } catch (InterruptedException | ExecutionException e) {
+            throw new RuntimeException(e);
+        }
+        log.info("*****PROCESSING COMPLETE.  {} pages processed.  {} documents exported to destination collection {}", pagesProcessed.get(), totalExpected, solrDestinationCollection);
         solrAdminActions.commit(solrDestinationCollection);
+        //TODO delete document that do not have the crawler ID
     }
+
+    public void processPages(String solr7Host, String solrSourceCollection, String solrDestinationCollection, Integer paginationSize, int currentPage, UUID crawlId, AtomicInteger pagesProcessed) {
+        String solrDocs = fetchSolrDocuments(solr7Host, solrSourceCollection, paginationSize, currentPage);
+        HttpSolrSelectResponse response = jsonToSolrDoc.parseSolrDocuments(solrDocs);
+
+        if (isEmptyResponse(response)) {
+            log.info("No solr documents in source collection. Breaking.");
+            return;
+        }
+        Collection<SolrInputDocument> documents = response.getDocs();
+        if (documents.isEmpty()) {
+            return;
+        }
+        log.info("Exporting {} documents from source collection {} to destination collection {}", documents.size(), solrSourceCollection, solrDestinationCollection);
+        processDocuments(documents, crawlId);
+        pagesProcessed.incrementAndGet();
+    }
+
 
     private long calculateNumOfPages(long totalDocuments, int paginationSize) {
         return (totalDocuments == -1) ? -1 : (totalDocuments / paginationSize) + 1;
@@ -131,7 +146,7 @@ public class SemanticIndexer {
     }
 
     private void processDocuments(Collection<SolrInputDocument> documents, UUID crawlId) {
-        documents.forEach(doc -> {
+        documents.parallelStream().forEach(doc -> {
             insertCreationDate(doc);
             solrIndexingService.addVectorFieldsToSolr(doc, crawlId.toString(), Date.from(Instant.now()));
         });

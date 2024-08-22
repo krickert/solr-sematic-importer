@@ -14,6 +14,9 @@ public class VectorConfig {
     private String model;
     private String destinationCollection;
     private String chunkFieldVectorName;
+    private String similarityFunction;
+    private Integer hnswMaxConnections;
+    private Integer hnswBeamWidth;
     private VectorCollectionCreationConfig collectionCreation;
 
     public Integer getChunkOverlap() {
@@ -55,13 +58,31 @@ public class VectorConfig {
     public void setDestinationCollection(String destinationCollection) {
         this.destinationCollection = destinationCollection;
     }
-
     public String getChunkFieldVectorName() {
         return chunkFieldVectorName;
     }
 
     public void setChunkFieldVectorName(String chunkFieldVectorName) {
         this.chunkFieldVectorName = chunkFieldVectorName;
+    }
+
+    public String getSimilarityFunction() {
+        return similarityFunction;
+    }
+    public void setSimilarityFunction(String similarityFunction) {
+        this.similarityFunction = similarityFunction;
+    }
+    public Integer getHnswMaxConnections() {
+        return hnswMaxConnections;
+    }
+    public void setHnswMaxConnections(Integer hnswMaxConnections) {
+        this.hnswMaxConnections = hnswMaxConnections;
+    }
+    public Integer getHnswBeamWidth() {
+        return hnswBeamWidth;
+    }
+    public void setHnswBeamWidth(Integer hnswBeamWidth) {
+        this.hnswBeamWidth = hnswBeamWidth;
     }
 
     public VectorCollectionCreationConfig getCollectionCreation() {

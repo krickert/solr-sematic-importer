@@ -100,6 +100,13 @@ public class SolrIndexerIntegrationTest {
                 indexerConfiguration.getSourceSolrConfiguration().getCollection(),
                 indexerConfiguration.getDestinationSolrConfiguration().getCollection(),
                 5);
+
+        //let's reindex everything - see if it works or messes up
+        semanticIndexer.exportSolrDocsFromExternalSolrCollection(
+                getSolr7Url(),
+                indexerConfiguration.getSourceSolrConfiguration().getCollection(),
+                indexerConfiguration.getDestinationSolrConfiguration().getCollection(),
+                5);
     }
 
     private void setupSolr7ForExportTest() {

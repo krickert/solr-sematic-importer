@@ -4,13 +4,9 @@ import com.krickert.search.indexer.config.IndexerConfiguration;
 import com.krickert.search.indexer.config.VectorConfig;
 import com.krickert.search.indexer.solr.index.SolrInputDocumentQueue;
 import com.krickert.search.service.*;
-import io.grpc.StatusRuntimeException;
-import io.micronaut.retry.annotation.Retryable;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.solr.client.solrj.SolrClient;
-import org.apache.solr.client.solrj.beans.Field;
 import org.apache.solr.common.SolrInputDocument;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -33,18 +29,21 @@ public class SolrVectorIndexingService {
     private final IndexerConfiguration indexerConfiguration;
     private final SolrInputDocumentQueue solrInputDocumentQueue;
     private final String destinationCollectionName;
+    private final SolrDestinationCollectionValidationService solrDestinationCollectionValidationService;
 
     @Inject
     public SolrVectorIndexingService(EmbeddingServiceGrpc.EmbeddingServiceBlockingStub embeddingServiceBlockingStub,
-                                     IndexerConfiguration indexerConfiguration, SolrClient solrClient,
+                                     IndexerConfiguration indexerConfiguration,
                                      SolrInputDocumentQueue solrInputDocumentQueue,
-                                     ChunkServiceGrpc.ChunkServiceBlockingStub chunkServiceBlockingStub) {
+                                     ChunkServiceGrpc.ChunkServiceBlockingStub chunkServiceBlockingStub,
+                                     SolrDestinationCollectionValidationService solrDestinationCollectionValidationService) {
         this.embeddingServiceBlockingStub = checkNotNull(embeddingServiceBlockingStub);
         this.indexerConfiguration = checkNotNull(indexerConfiguration);
         this.destinationCollectionName = indexerConfiguration.getDestinationSolrConfiguration().getCollection();
         this.solrInputDocumentQueue = checkNotNull(solrInputDocumentQueue);
         this.chunkServiceBlockingStub = checkNotNull(chunkServiceBlockingStub);
         log.info("CreateVectorCollectionService created");
+        this.solrDestinationCollectionValidationService = solrDestinationCollectionValidationService;
     }
 
 
@@ -72,7 +71,8 @@ public class SolrVectorIndexingService {
 
 
     private void processChunkField(String fieldName, VectorConfig vectorConfig,
-                                   String fieldData, String origDocId, String crawlId, Date dateCreated) {
+                                   String fieldData, String origDocId,
+                                   String crawlId, Date dateCreated) {
         if (fieldData == null) {
             log.warn("Field data for {} is null in document with id {}", fieldName, origDocId);
             return;
@@ -87,11 +87,12 @@ public class SolrVectorIndexingService {
         EmbeddingsVectorsReply embeddingsVectorsReply = getEmbeddingsVectorsReply(chunkerReply.getChunksList());
 
         // Create a list of beans based on these vectors
-        solrInputDocumentQueue.addBeans(vectorConfig.getDestinationCollection(),
+        solrInputDocumentQueue.addDocuments(vectorConfig.getDestinationCollection(),
                 createChunkDocuments(fieldName, embeddingsVectorsReply.getEmbeddingsList(),
                         chunkerReply.getChunksList().stream().toList(),
                         origDocId, crawlId, dateCreated,
-                        indexerConfiguration.getDestinationSolrConfiguration().getCollection()));
+                        indexerConfiguration.getDestinationSolrConfiguration().getCollection(),
+                        vectorConfig.getChunkFieldVectorName(),solrDestinationCollectionValidationService.getDimensionality()));
     }
 
 
@@ -116,14 +117,16 @@ public class SolrVectorIndexingService {
         solrInputDocument.addField(vectorFieldName, embeddingsVectorReply.getEmbeddingsList());
     }
 
-    private List<Object> createChunkDocuments(String fieldName,
+    private List<SolrInputDocument> createChunkDocuments(String fieldName,
                                               List<EmbeddingsVectorReply> embeddingsList,
                                               List<String> chunksList,
                                               String origDocId,
                                               String crawlId,
                                               Date dateCreated,
-                                              String parentCollection) {
-        List<Object> chunkDocuments = new ArrayList<>(chunksList.size());
+                                              String parentCollection,
+                                              String chunkVectorFieldName,
+                                              Integer dimensionality) {
+        List<SolrInputDocument> chunkDocuments = new ArrayList<>(chunksList.size());
 
         for (int i = 0; i < chunksList.size(); i++) {
             String chunk = chunksList.get(i);
@@ -131,7 +134,7 @@ public class SolrVectorIndexingService {
             Collection<Float> vector = embedding.getEmbeddingsList();
             // Define the docId with left-padded sequence number
             String docId = origDocId + "#" + StringUtils.leftPad(""+i, 7, "0");
-            AddVectorToSolrDocumentRequest request = new AddVectorToSolrDocumentRequest(
+            SolrInputDocument docToAdd = createSolrInputDocument(
                     docId,
                     origDocId, // Assuming parentId is the original document ID
                     chunk,
@@ -140,29 +143,53 @@ public class SolrVectorIndexingService {
                     fieldName,
                     crawlId,
                     dateCreated,
-                    parentCollection
+                    parentCollection,
+                    chunkVectorFieldName
             );
-            chunkDocuments.add(request);
+            chunkDocuments.add(docToAdd);
         }
         return chunkDocuments;
     }
-    @Retryable(attempts = "5", delay = "500ms", includes = StatusRuntimeException.class)
     protected ChunkReply getChunks(ChunkRequest request) {
         return chunkServiceBlockingStub.chunk(request);
     }
 
 
 
-    @Retryable(attempts = "5", delay = "500ms", includes = StatusRuntimeException.class)
     protected EmbeddingsVectorReply getEmbeddingsVectorReply(String fieldData) {
         return embeddingServiceBlockingStub.createEmbeddingsVector(EmbeddingsVectorRequest.newBuilder().setText(fieldData).build());
     }
 
 
-    @Retryable(attempts = "5", delay = "500ms", includes = StatusRuntimeException.class)
     protected EmbeddingsVectorsReply getEmbeddingsVectorsReply(List<String> fieldDataList) {
         return embeddingServiceBlockingStub.createEmbeddingsVectors(EmbeddingsVectorsRequest.newBuilder().addAllText(fieldDataList).build());
     }
 
+    public static SolrInputDocument createSolrInputDocument(
+            String docId,
+            String parentId,
+            String chunk,
+            Integer chunkNumber,
+            Collection<Float> vector,
+            String parentFieldName,
+            String crawlId,
+            Date dateCreated,
+            String parentCollection,
+            String vectorFieldName)
+    {
+
+        SolrInputDocument document = new SolrInputDocument();
+        document.addField("id", docId);
+        document.addField("parentId", parentId);
+        document.addField("chunk", chunk);
+        document.addField("chunkNumber", chunkNumber);
+        document.addField(vectorFieldName , vector);
+        document.addField("parentFieldName", parentFieldName);
+        document.addField("crawlId", crawlId);
+        document.addField("dateCreated", dateCreated);
+        document.addField("parentCollection", parentCollection);
+
+        return document;
+    }
 
 }

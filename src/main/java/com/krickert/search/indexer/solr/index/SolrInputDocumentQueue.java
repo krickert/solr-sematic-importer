@@ -43,9 +43,9 @@ public class SolrInputDocumentQueue {
     }
 
     @Retryable(attempts = "5", delay = "500ms", includes = RuntimeException.class)
-    public void addBeans(String collection, List<Object> documents) {
+    public void addBeans(String collection, List<SolrInputDocument> documents) {
         try {
-            solrClient.addBeans(collection, documents);
+            solrClient.add(collection, documents);
         } catch (SolrServerException | IOException e) {
             throw new RuntimeException(e);
         }

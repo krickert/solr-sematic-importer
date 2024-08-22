@@ -58,7 +58,6 @@ public class IndexerConfigurationTest {
         Assertions.assertNotNull(destConfig);
         Assertions.assertEquals("9.6.1", destConfig.getVersion());
         Assertions.assertEquals("destination_collection", destConfig.getCollection());
-
         Assertions.assertEquals("classpath:semantic_example.zip", destConfig.getCollectionCreation().getCollectionConfigFile());
         Assertions.assertEquals("semantic_example", destConfig.getCollectionCreation().getCollectionConfigName());
         Assertions.assertEquals(1, destConfig.getCollectionCreation().getNumberOfShards());
@@ -101,7 +100,11 @@ public class IndexerConfigurationTest {
         Assertions.assertEquals(30, bodyConfig.getChunkOverlap());
         Assertions.assertEquals(300, bodyConfig.getChunkSize());
         Assertions.assertEquals("mini-LM", bodyConfig.getModel());
-        Assertions.assertEquals("body_vectors", bodyConfig.getDestinationCollection());
+        Assertions.assertEquals("body-vectors", bodyConfig.getDestinationCollection());
+        Assertions.assertEquals("body-chunk-vector", bodyConfig.getChunkFieldVectorName());
+        Assertions.assertEquals("cosine", bodyConfig.getSimilarityFunction());
+        Assertions.assertEquals(16, bodyConfig.getHnswMaxConnections());
+        Assertions.assertEquals(100, bodyConfig.getHnswBeamWidth());
         Assertions.assertEquals("classpath:default_base_config.zip", bodyConfig.getCollectionCreation().getCollectionConfigFile());
         Assertions.assertEquals("vector_config", bodyConfig.getCollectionCreation().getCollectionConfigName());
         Assertions.assertEquals(1, bodyConfig.getCollectionCreation().getNumberOfShards());

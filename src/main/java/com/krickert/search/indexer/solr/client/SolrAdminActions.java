@@ -1,11 +1,12 @@
 package com.krickert.search.indexer.solr.client;
 
-import com.google.common.base.Preconditions;
+import com.google.common.collect.Sets;
 import com.krickert.search.indexer.config.SolrConfiguration;
 import com.krickert.search.indexer.config.VectorConfig;
 import io.micronaut.core.io.ResourceLoader;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.solr.client.solrj.SolrClient;
 import org.apache.solr.client.solrj.SolrServerException;
 import org.apache.solr.client.solrj.request.CollectionAdminRequest;
@@ -29,18 +30,22 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
 
+import static com.google.common.base.Preconditions.checkNotNull;
+
 @Singleton
 public class SolrAdminActions {
     private static final Logger log = LoggerFactory.getLogger(SolrAdminActions.class);
 
     private final SolrClient solrClient;
     private final ResourceLoader resourceLoader;
+    private final static Set<String> validValues = Sets.newHashSet("euclidean", "dot_product", "cosine");
+
 
     @Inject
     public SolrAdminActions(SolrClient solrClient, ResourceLoader resourceLoader) {
-        this.solrClient = solrClient;
-        this.resourceLoader = resourceLoader;
-        assert solrClient != null;
+        this.solrClient = checkNotNull(solrClient);
+        assert isSolrServerAlive();
+        this.resourceLoader = checkNotNull(resourceLoader);
     }
 
     /**
@@ -54,7 +59,7 @@ public class SolrAdminActions {
 
     public boolean isSolrServerAlive(SolrClient solrClient) {
         try {
-            SolrPingResponse pingResponse = solrClient.ping();
+            SolrPingResponse pingResponse = solrClient.ping("dummy");
             return pingResponse.getStatus() == 0;
         } catch (SolrServerException | IOException e) {
             log.error("Exception thrown", e);
@@ -94,8 +99,8 @@ public class SolrAdminActions {
 
 
     public boolean doesConfigExist(SolrClient solrClient, String configToCheck) {
-        Preconditions.checkNotNull(solrClient);
-        Preconditions.checkNotNull(configToCheck);
+        checkNotNull(solrClient);
+        checkNotNull(configToCheck);
         ModifiableSolrParams params = new ModifiableSolrParams();
         params.set("action", "LIST");
 
@@ -217,6 +222,7 @@ public class SolrAdminActions {
         }
     }
 
+
     public void commit(String collectionName){
         try {
             solrClient.commit(collectionName);
@@ -227,22 +233,95 @@ public class SolrAdminActions {
 
     }
 
-    public void validateVectorField(String vectorFieldName, Integer dimensionality, String collection) throws IOException, SolrServerException {
+    public void validateVectorField(
+            String vectorFieldName,
+            String similarityFunction,
+            Integer hnswMaxConnections,
+            Integer hnswBeamWidth,
+            Integer dimensionality,
+            String collection) throws IOException, SolrServerException {
         // Check if the field type exists
-        String vectorFieldType = vectorFieldName + "_" + dimensionality;
-        boolean fieldTypeExists = checkFieldTypeExists(dimensionality, collection);
-        if (!fieldTypeExists) {
-            log.info("A dense vector field of dimensionality {} does not exist.  Creating it.", dimensionality);
-            // Create the field type
-            createFieldType(vectorFieldType, dimensionality, collection);
-        }
 
+        //inline fields have a matching type with an underscore
+        String vectorFieldType = vectorFieldName + "_" + dimensionality;
+
+        //looking in the collection to see if it's been created
+        FieldTypeRepresentation fieldTypeRepresentation = getFieldTypeByName(vectorFieldType, collection);
+
+        //if the field type has been created, we have to ensure that the field type attributes match or throw
+        //an illegal argument exception
+        if (fieldTypeRepresentation != null) {
+            validateFieldTypeAttributes(similarityFunction, hnswMaxConnections, hnswBeamWidth, dimensionality, fieldTypeRepresentation, vectorFieldType);
+        } else {
+            //if the validation stage passes, we can create the field type
+            createDenseVectorFieldType(
+                    vectorFieldType,
+                    dimensionality,
+                    similarityFunction,
+                    hnswMaxConnections,
+                    hnswBeamWidth,
+                    collection);
+        }
         // Check if the field exists
         boolean fieldExists = checkFieldExists(vectorFieldName, collection);
+
         if (!fieldExists) {
             // Create the field
-            createField(vectorFieldName, vectorFieldType, collection);
+            createDenseVectorField(vectorFieldName, vectorFieldType, collection);
+        } else {
+            log.info("Field {} exists.  No need to create it.", vectorFieldName);
         }
+    }
+
+    private void validateFieldTypeAttributes(String similarityFunction, Integer hnswMaxConnections, Integer hnswBeamWidth, Integer dimensionality, FieldTypeRepresentation fieldTypeRepresentation, String vectorFieldType) {
+        Map<String, Object> attributes = fieldTypeRepresentation.getAttributes();
+
+        String fieldTypeClass = (String) attributes.get("class");
+        if (!"solr.DenseVectorField".equals(fieldTypeClass)) {
+            throw new IllegalArgumentException("The field type " + vectorFieldType + " is not a dense vector field. Check the configuration.");
+        }
+
+        // Validate dimensionality
+        validateAttribute("vectorDimension", attributes.get("vectorDimension"), dimensionality, vectorFieldType);
+
+        // Validate similarityFunction if provided
+        if (similarityFunction != null) {
+            validateAttribute("similarityFunction", attributes.get("similarityFunction"), similarityFunction, vectorFieldType);
+        }
+
+        // Validate hnswMaxConnections if provided
+        if (hnswMaxConnections != null) {
+            validateAttribute("hnswMaxConnections", attributes.get("hnswMaxConnections"), hnswMaxConnections, vectorFieldType);
+        }
+
+        // Validate hnswBeamWidth if provided
+        if (hnswBeamWidth != null) {
+            validateAttribute("hnswBeamWidth", attributes.get("hnswBeamWidth"), hnswBeamWidth, vectorFieldType);
+        }
+    }
+
+
+    private void validateAttribute(String attributeName, Object actualValue, Object expectedValue, String fieldType) {
+        if (expectedValue != null) {
+            if (!expectedValue.toString().equals(actualValue)) {
+                throw new IllegalArgumentException("The field type " + fieldType + " has a " + attributeName + " of " + actualValue + " but the provided " + attributeName + " is " + expectedValue + ". Check the configuration.");
+            }
+        }
+    }
+
+    private FieldTypeRepresentation getFieldTypeByName(String fieldTypeName, String collectionName) throws IOException, SolrServerException {
+        SchemaRequest.FieldTypes fieldTypesRequest = new SchemaRequest.FieldTypes();
+        SchemaResponse.FieldTypesResponse fieldTypesResponse = fieldTypesRequest.process(solrClient, collectionName);
+        List<FieldTypeRepresentation> fieldTypes = fieldTypesResponse.getFieldTypes();
+
+        for (FieldTypeRepresentation fieldTypeInfo : fieldTypes) {
+            Map<String, Object> attributes = fieldTypeInfo.getAttributes();
+            String name = (String) attributes.get("name");
+            if (fieldTypeName.equals(name)) {
+                return fieldTypeInfo;
+            }
+        }
+        return null;
     }
 
     private boolean checkFieldTypeExists(Integer dimensionality, String collectionName) throws IOException, SolrServerException {
@@ -278,19 +357,36 @@ public class SolrAdminActions {
         return false;
     }
 
-    private void createFieldType(String fieldType, Integer dimensionality, String collectionName) throws IOException, SolrServerException {
+    private void createDenseVectorFieldType(
+            String fieldType,
+            Integer dimensionality,
+            String similarityFunction,
+            Integer hnswMaxConnections,
+            Integer hnswBeamWidth,
+            String collectionName) throws IOException, SolrServerException {
         FieldTypeDefinition fieldTypeDefinition = new FieldTypeDefinition();
         Map<String, Object> fieldTypeAttributes = new HashMap<>();
         fieldTypeAttributes.put("name", fieldType);
         fieldTypeAttributes.put("class", "solr.DenseVectorField");
         fieldTypeAttributes.put("vectorDimension", dimensionality);
+        if (validValues.contains(similarityFunction)) {
+            fieldTypeAttributes.put("similarityFunction", similarityFunction);
+        } else {
+            fieldTypeAttributes.put("similarityFunction", "cosine");
+        }
+        if (hnswMaxConnections != null) {
+            fieldTypeAttributes.put("hnswMaxConnections", hnswMaxConnections);
+        }
+        if (hnswBeamWidth != null) {
+            fieldTypeAttributes.put("hnswBeamWidth", hnswBeamWidth);
+        }
         fieldTypeDefinition.setAttributes(fieldTypeAttributes);
         log.info("Created the fieldTypeDefinition: {}", fieldTypeDefinition);
         SchemaRequest.AddFieldType addFieldTypeRequest = new SchemaRequest.AddFieldType(fieldTypeDefinition);
         solrClient.request(addFieldTypeRequest, collectionName);
     }
 
-    private void createField(String fieldName, String fieldType, String collectionName) throws IOException, SolrServerException {
+    private void createDenseVectorField(String fieldName, String fieldType, String collectionName) throws IOException, SolrServerException {
         Map<String, Object> fieldAttributes = new HashMap<>();
         fieldAttributes.put("name", fieldName);
         fieldAttributes.put("type", fieldType);

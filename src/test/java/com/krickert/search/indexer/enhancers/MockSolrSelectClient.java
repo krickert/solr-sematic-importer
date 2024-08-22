@@ -14,4 +14,14 @@ public class MockSolrSelectClient implements HttpSolrSelectClient {
     public String getSolrDocs(Integer paginationSize, Integer pageNumber) throws IOException, InterruptedException {
         return "";
     }
+
+    @Override
+    public Long getTotalNumberOfDocumentsForCollection() {
+        return 0L;
+    }
+
+    @Override
+    public Long getTotalNumberOfDocumentsForCollection(String solr7Host, String solr7Collection) {
+        return 0L;
+    }
 }
