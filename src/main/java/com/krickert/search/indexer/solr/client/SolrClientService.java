@@ -9,6 +9,7 @@ import io.micronaut.http.client.HttpClient;
 import io.micronaut.http.client.annotation.Client;
 import jakarta.inject.Inject;
 import org.apache.solr.client.solrj.SolrClient;
+import org.apache.solr.client.solrj.impl.ConcurrentUpdateHttp2SolrClient;
 import org.apache.solr.client.solrj.impl.Http2SolrClient;
 import org.apache.solr.client.solrj.request.RequestWriter;
 import org.apache.solr.client.solrj.SolrRequest;
@@ -48,7 +49,7 @@ public class SolrClientService {
     }
 
     @Bean
-    public SolrClient createSolrClient(
+    public Http2SolrClient createSolrClient(
             @Value("${solr-config.destination.connection.url}") String solrUrl,
             @Value("${solr-config.destination.collection}") String collection) {
         return new Http2SolrClient.Builder(solrUrl)
@@ -58,6 +59,17 @@ public class SolrClientService {
     }
 
 
+    @Bean
+    public ConcurrentUpdateHttp2SolrClient createConcurrentUpdateSolrClient(
+            Http2SolrClient solrClient,
+            @Value("${solr-config.destination.connection.url}") String solrUrl,
+            @Value("${solr-config.destination.connection.queue-size}") Integer queueSize,
+            @Value("${solr-config.destination.connection.thread-count}") Integer threadCount) {
+        return new ConcurrentUpdateHttp2SolrClient.Builder(solrUrl, solrClient, false)
+                .withQueueSize(queueSize)
+                .withThreadCount(threadCount)
+                .build();
+    }
 
     private String getOktaAccessToken() throws InterruptedException, ExecutionException, TimeoutException {
         Map<String, String> body = new HashMap<>();

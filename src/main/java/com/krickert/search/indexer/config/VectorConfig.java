@@ -1,5 +1,6 @@
 package com.krickert.search.indexer.config;
 
+import io.micronaut.context.annotation.ConfigurationProperties;
 import io.micronaut.context.annotation.EachProperty;
 import io.micronaut.core.annotation.Introspected;
 
@@ -12,8 +13,8 @@ public class VectorConfig {
     private Boolean chunkField;
     private String model;
     private String destinationCollection;
-    private Boolean destinationCollectionCreate;
-    private String destinationCollectionVectorFieldName;
+    private String chunkFieldVectorName;
+    private VectorCollectionCreationConfig collectionCreation;
 
     public Integer getChunkOverlap() {
         return chunkOverlap;
@@ -55,19 +56,59 @@ public class VectorConfig {
         this.destinationCollection = destinationCollection;
     }
 
-    public Boolean isDestinationCollectionCreate() {
-        return destinationCollectionCreate;
+    public String getChunkFieldVectorName() {
+        return chunkFieldVectorName;
     }
 
-    public void setDestinationCollectionCreate(boolean destinationCollectionCreate) {
-        this.destinationCollectionCreate = destinationCollectionCreate;
+    public void setChunkFieldVectorName(String chunkFieldVectorName) {
+        this.chunkFieldVectorName = chunkFieldVectorName;
     }
 
-    public String getDestinationCollectionVectorFieldName() {
-        return destinationCollectionVectorFieldName;
+    public VectorCollectionCreationConfig getCollectionCreation() {
+        return collectionCreation;
     }
 
-    public void setDestinationCollectionVectorFieldName(String destinationCollectionVectorFieldName) {
-        this.destinationCollectionVectorFieldName = destinationCollectionVectorFieldName;
+    public void setCollectionCreation(VectorCollectionCreationConfig collectionCreation) {
+        this.collectionCreation = collectionCreation;
+    }
+
+    @ConfigurationProperties("collection-creation")
+    public static class VectorCollectionCreationConfig  {
+        private String collectionConfigFile;
+        private String collectionConfigName;
+        private int numberOfShards;
+        private int numberOfReplicas;
+
+        public String getCollectionConfigFile() {
+            return collectionConfigFile;
+        }
+
+        public void setCollectionConfigFile(String collectionConfigFile) {
+            this.collectionConfigFile = collectionConfigFile;
+        }
+
+        public String getCollectionConfigName() {
+            return collectionConfigName;
+        }
+
+        public void setCollectionConfigName(String collectionConfigName) {
+            this.collectionConfigName = collectionConfigName;
+        }
+
+        public int getNumberOfShards() {
+            return numberOfShards;
+        }
+
+        public void setNumberOfShards(int numberOfShards) {
+            this.numberOfShards = numberOfShards;
+        }
+
+        public int getNumberOfReplicas() {
+            return numberOfReplicas;
+        }
+
+        public void setNumberOfReplicas(int numberOfReplicas) {
+            this.numberOfReplicas = numberOfReplicas;
+        }
     }
 }

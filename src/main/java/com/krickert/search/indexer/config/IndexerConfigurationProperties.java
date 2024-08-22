@@ -35,7 +35,6 @@ public class IndexerConfigurationProperties {
         this.sourceSeedData = sourceSeedData;
     }
 
-
     @ConfigurationProperties("source-seed-data")
     public static class SourceSeedData {
 

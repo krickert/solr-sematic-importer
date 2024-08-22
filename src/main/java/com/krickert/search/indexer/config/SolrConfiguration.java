@@ -11,21 +11,13 @@
        private String name;
        private String version;
        private String collection;
-       private String collectionConfigFile;
+       private SolrCollectionCreationConfig collectionCreation;
        private Connection connection;
 
        public SolrConfiguration(@Parameter("name") String name) {
            this.name = name;
        }
 
-       // Getters and Setters
-       public String getCollectionConfigFile() {
-           return collectionConfigFile;
-       }
-
-       public void setCollectionConfigFile(String collectionConfigFile) {
-           this.collectionConfigFile = collectionConfigFile;
-       }
        public String getName() {
            return name;
        }
@@ -46,6 +38,12 @@
            return collection;
        }
 
+       public SolrCollectionCreationConfig getCollectionCreation() {
+           return collectionCreation;
+       }
+       public void setCollectionCreation(SolrCollectionCreationConfig collectionCreation) {
+           this.collectionCreation = collectionCreation;
+       }
        public void setCollection(String collection) {
            this.collection = collection;
        }
@@ -59,10 +57,53 @@
        }
 
        @Serdeable
+       @ConfigurationProperties("collection-creation")
+       public static class SolrCollectionCreationConfig {
+           private String collectionConfigFile;
+           private String collectionConfigName;
+           private int numberOfShards;
+           private int numberOfReplicas;
+
+           public String getCollectionConfigFile() {
+               return collectionConfigFile;
+           }
+
+           public void setCollectionConfigFile(String collectionConfigFile) {
+               this.collectionConfigFile = collectionConfigFile;
+           }
+
+           public String getCollectionConfigName() {
+               return collectionConfigName;
+           }
+
+           public void setCollectionConfigName(String collectionConfigName) {
+               this.collectionConfigName = collectionConfigName;
+           }
+
+           public int getNumberOfShards() {
+               return numberOfShards;
+           }
+
+           public void setNumberOfShards(int numberOfShards) {
+               this.numberOfShards = numberOfShards;
+           }
+
+           public int getNumberOfReplicas() {
+               return numberOfReplicas;
+           }
+
+           public void setNumberOfReplicas(int numberOfReplicas) {
+               this.numberOfReplicas = numberOfReplicas;
+           }
+       }
+
+       @Serdeable
        @ConfigurationProperties("connection")
        public static class Connection {
            private String url;
            private Authentication authentication;
+           private Integer queueSize;
+           private Integer threadCount;
 
            // Getters and Setters
            public String getUrl() {
@@ -80,6 +121,23 @@
            public void setAuthentication(Authentication authentication) {
                this.authentication = authentication;
            }
+
+           public Integer getQueueSize() {
+               return queueSize;
+           }
+
+           public void setQueueSize(Integer queueSize) {
+               this.queueSize = queueSize;
+           }
+
+           public Integer getThreadCount() {
+               return threadCount;
+           }
+
+           public void setThreadCount(Integer threadCount) {
+               this.threadCount = threadCount;
+           }
+
 
            @Serdeable
            @ConfigurationProperties("authentication")
