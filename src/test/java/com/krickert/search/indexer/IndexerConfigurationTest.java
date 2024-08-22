@@ -60,7 +60,7 @@ public class IndexerConfigurationTest {
         Assertions.assertEquals("destination_collection", destConfig.getCollection());
 
         Assertions.assertEquals("classpath:semantic_example.zip", destConfig.getCollectionCreation().getCollectionConfigFile());
-        Assertions.assertEquals("vector_config", destConfig.getCollectionCreation().getCollectionConfigName());
+        Assertions.assertEquals("semantic_example", destConfig.getCollectionCreation().getCollectionConfigName());
         Assertions.assertEquals(1, destConfig.getCollectionCreation().getNumberOfShards());
         Assertions.assertEquals(2, destConfig.getCollectionCreation().getNumberOfReplicas());
 
