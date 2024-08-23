@@ -1,6 +1,8 @@
 package com.krickert.search.indexer.solr;
 
+import io.micronaut.context.annotation.Requires;
 import io.micronaut.context.annotation.Value;
+import io.micronaut.context.env.Environment;
 import jakarta.annotation.PreDestroy;
 import jakarta.inject.Singleton;
 import org.slf4j.Logger;
@@ -10,6 +12,7 @@ import org.testcontainers.utility.DockerImageName;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+@Requires(notEnv = Environment.DEVELOPMENT)
 @Singleton
 public class SolrTestContainers {
     private static final Logger log = LoggerFactory.getLogger(SolrTestContainers.class);

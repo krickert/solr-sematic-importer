@@ -27,6 +27,7 @@ public class ProtobufSolrIndexer {
                                IndexerConfiguration indexerConfiguration) {
         this.protobufToSolrDocument = protobufToSolrDocument;
         this.indexerConfiguration = indexerConfiguration;
+        log.info("ProtobufSolrIndexer creatted.");
     }
 
     public void exportProtobufToSolr(Collection<Message> protos) {

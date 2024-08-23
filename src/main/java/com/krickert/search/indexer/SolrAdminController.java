@@ -20,6 +20,10 @@ public class SolrAdminController {
 
     private static final Logger log = LoggerFactory.getLogger(SolrAdminController.class);
 
+    public SolrAdminController() {
+        log.info("Created SolrAdminController");
+    }
+
     @Inject
     private SolrAdminTaskClient solrAdminTaskClient;
 

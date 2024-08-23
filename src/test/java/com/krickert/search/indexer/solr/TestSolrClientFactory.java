@@ -3,7 +3,9 @@ package com.krickert.search.indexer.solr;
 import com.krickert.search.indexer.config.IndexerConfiguration;
 import io.micronaut.context.annotation.Factory;
 import io.micronaut.context.annotation.Replaces;
+import io.micronaut.context.annotation.Requires;
 import io.micronaut.context.annotation.Value;
+import io.micronaut.context.env.Environment;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 import org.apache.solr.client.solrj.SolrClient;
@@ -13,6 +15,7 @@ import org.testcontainers.containers.SolrContainer;
 
 import java.util.concurrent.TimeUnit;
 
+@Requires(notEnv = Environment.DEVELOPMENT)
 @Factory
 public class TestSolrClientFactory {
 
@@ -21,6 +24,8 @@ public class TestSolrClientFactory {
 
     @Inject
     IndexerConfiguration indexerConfiguration;
+
+
 
     @Singleton
     @Replaces(SolrClient.class) // Replace the existing SolrClient bean

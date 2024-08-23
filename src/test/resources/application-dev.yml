@@ -1,18 +1,14 @@
 micronaut:
-  application:
-    name: solr-semantic-importer
-  http:
-    services:
-      grpc-services:
-        retry:
-          attempts: 5
-          delay: 500ms
-grpc:
-  client:
-    plaintext: true
-    enable-retry: true
-    max-inbound-message-size: 76800000
+  environment:
+    - dev
+  executors:
+    solr-source-fetch-executor:
+      type: fixed
+      nThreads: 50
+      parallelism: 20
 
+solr9-test-port: 8983
+solr7-test-port: 8980
 indexer:
   vector-grpc-channel: "localhost:50401"
   chunker-grpc-channel: "localhost:50403"
@@ -90,3 +86,7 @@ grpc-test-client-config:
     rest-mapped-port: 60401
     docker-image-name: krickert/vectorizer:1.0-SNAPSHOT
 
+grpc:
+  client:
+    enable-retry: true
+    max-inbound-message-size: 76800000

@@ -28,6 +28,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.IntStream;
 
+import static com.google.common.base.Preconditions.checkNotNull;
+
 @Singleton
 public class SemanticIndexer {
 
@@ -50,13 +52,16 @@ public class SemanticIndexer {
                            SolrVectorIndexingService createVectorCollectionService,
                            ResourceLoader resourceLoader,
                            SolrAdminActions solrAdminActions) {
-        this.httpSolrSelectClient = httpSolrSelectClient;
-        this.jsonToSolrDoc = jsonToSolrDoc;
-        this.indexerConfiguration = indexerConfiguration;
-        this.solrDestinationCollectionValidationService = solrDestinationCollectionValidationService;
-        this.solrIndexingService = createVectorCollectionService;
-        this.resourceLoader = resourceLoader;
-        this.solrAdminActions = solrAdminActions;
+
+        log.info("creating SemanticIndexer");
+        this.httpSolrSelectClient = checkNotNull(httpSolrSelectClient);
+        this.jsonToSolrDoc =  checkNotNull(jsonToSolrDoc);
+        this.indexerConfiguration =  checkNotNull(indexerConfiguration);
+        this.solrDestinationCollectionValidationService = checkNotNull(solrDestinationCollectionValidationService);
+        this.solrIndexingService = checkNotNull(createVectorCollectionService);
+        this.resourceLoader =  checkNotNull(resourceLoader);
+        this.solrAdminActions =  checkNotNull(solrAdminActions);
+        log.info("finished creating SemanticIndexer");
     }
 
     public List<Message> convertDescriptorsToMessages(Collection<PipeDocument> descriptors) {

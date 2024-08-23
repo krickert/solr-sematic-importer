@@ -26,10 +26,12 @@ public class HttpSolrSelectClientImpl implements HttpSolrSelectClient {
     public HttpSolrSelectClientImpl(SimpleGetRequest simpleGetRequest,
                                     @Value("${solr-config.source.connection.url}") String solrHost,
                                     @Value("${solr-config.source.collection}") String solrCollection) {
+        log.info("Creating Http-based solr client");
         this.simpleGetRequest = checkNotNull(simpleGetRequest, "get request failed to load");
         this.solrHost = checkNotNull(solrHost, "solr host is needed");
         this.solrCollection = checkNotNull(solrCollection, "solr collection is needed");
         this.objectMapper = new ObjectMapper();
+        log.info("Created Http-based solr client");
     }
 
     @Override

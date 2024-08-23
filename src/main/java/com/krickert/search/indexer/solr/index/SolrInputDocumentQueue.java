@@ -21,7 +21,9 @@ public class SolrInputDocumentQueue {
 
     @Inject
     public SolrInputDocumentQueue(ConcurrentUpdateHttp2SolrClient solrClient) {
+        log.info("Creating SolrInputDocumentQueue");
         this.solrClient = solrClient;
+        log.info("Created SolrInputDocumentQueue");
     }
 
     @Retryable(attempts = "5", delay = "500ms", includes = RuntimeException.class)

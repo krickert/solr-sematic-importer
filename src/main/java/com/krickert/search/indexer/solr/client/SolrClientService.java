@@ -8,6 +8,8 @@ import io.micronaut.http.MediaType;
 import io.micronaut.http.client.HttpClient;
 import io.micronaut.http.client.annotation.Client;
 import jakarta.inject.Inject;
+import jakarta.inject.Named;
+import jakarta.inject.Qualifier;
 import org.apache.solr.client.solrj.SolrClient;
 import org.apache.solr.client.solrj.impl.ConcurrentUpdateHttp2SolrClient;
 import org.apache.solr.client.solrj.impl.Http2SolrClient;
@@ -49,6 +51,7 @@ public class SolrClientService {
     }
 
     @Bean
+    @Named("solrClient")
     public Http2SolrClient createSolrClient(
             @Value("${solr-config.destination.connection.url}") String solrUrl,
             @Value("${solr-config.destination.collection}") String collection) {
@@ -60,6 +63,7 @@ public class SolrClientService {
 
 
     @Bean
+    @Named("concurrentClient")
     public ConcurrentUpdateHttp2SolrClient createConcurrentUpdateSolrClient(
             Http2SolrClient solrClient,
             @Value("${solr-config.destination.connection.url}") String solrUrl,

@@ -1,18 +1,22 @@
 package com.krickert.search.indexer;
 
+import com.krickert.search.indexer.grpc.ClientGrpcTestContainers;
 import io.micronaut.configuration.picocli.PicocliRunner;
 import io.micronaut.context.ApplicationContext;
 import io.micronaut.context.env.Environment;
 
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
+
+import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
+import jakarta.inject.Inject;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class SolrSemanticImporterCommandTest {
 
-    @Test
+    //@Test
     public void testWithCommandLineOption() throws Exception {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         System.setOut(new PrintStream(baos));

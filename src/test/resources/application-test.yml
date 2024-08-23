@@ -16,11 +16,6 @@ indexer:
     enabled: false
     seed-json-file: sample_solr_result.json
 
-resilience4j.retry:
-  retryConfig:
-    maxAttempts: 3
-    waitDuration: 500ms
-
 solr-config:
   source:
     version: 7.7.3

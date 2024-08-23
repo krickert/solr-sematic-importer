@@ -12,6 +12,10 @@ import java.util.*;
 public class ProtobufToSolrDocument {
     private static final Logger log = LoggerFactory.getLogger(ProtobufToSolrDocument.class);
 
+    public ProtobufToSolrDocument() {
+        log.info("created ProtobufToSolrDocument");
+    }
+
     public SolrInputDocument convertProtobufToSolrDocument(Message protobuf) {
         try {
             log.debug(JsonFormat.printer().print(protobuf));

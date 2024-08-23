@@ -7,6 +7,8 @@ import com.krickert.search.indexer.solr.httpclient.select.HttpSolrSelectResponse
 import jakarta.inject.Singleton;
 import org.apache.solr.common.SolrInputDocument;
 import org.apache.solr.common.SolrInputField;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -15,6 +17,12 @@ import java.util.Map;
 
 @Singleton
 public class JsonToSolrDocParser {
+    private static final Logger log = LoggerFactory.getLogger(JsonToSolrDocParser.class);
+
+    public JsonToSolrDocParser() {
+        log.info("Created JsonToSolrDocParser");
+    }
+
     ObjectMapper mapper = new ObjectMapper();
 
     public Collection<String> parseSolrDocumentsToJSON(String jsonString) {

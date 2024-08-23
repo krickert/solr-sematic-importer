@@ -5,8 +5,8 @@ import com.krickert.search.indexer.config.SolrConfiguration;
 import com.krickert.search.indexer.config.VectorConfig;
 import io.micronaut.core.io.ResourceLoader;
 import jakarta.inject.Inject;
+import jakarta.inject.Named;
 import jakarta.inject.Singleton;
-import org.apache.commons.lang3.StringUtils;
 import org.apache.solr.client.solrj.SolrClient;
 import org.apache.solr.client.solrj.SolrServerException;
 import org.apache.solr.client.solrj.impl.BaseHttpSolrClient;
@@ -43,10 +43,11 @@ public class SolrAdminActions {
 
 
     @Inject
-    public SolrAdminActions(SolrClient solrClient, ResourceLoader resourceLoader) {
+    public SolrAdminActions(
+            @Named("solrClient") SolrClient solrClient, ResourceLoader resourceLoader) {
         this.solrClient = checkNotNull(solrClient);
-        assert isSolrServerAlive();
         this.resourceLoader = checkNotNull(resourceLoader);
+        log.info("SolrAdminActions is created");
     }
 
     /**
@@ -159,7 +160,7 @@ public class SolrAdminActions {
         Optional<URL> resource = resourceLoader.getResource(configFile);
         if (resource.isEmpty()) {
             log.error("Resource {} not found", configFile);
-            throw new IllegalStateException("Missing resource file " + " configFile");
+            throw new IllegalStateException("Missing resource file " + configFile);
         }
 
         try {
@@ -227,7 +228,16 @@ public class SolrAdminActions {
             log.error("Could not commit collection {} due to {}", collectionName, e.getMessage());
             throw new RuntimeException(e);
         }
+    }
 
+    public void deleteOrphansAfterIndexing(Collection<String> collections, String crawlId) {
+        for (String collection : collections) {
+            try {
+                solrClient.deleteByQuery(collection, "-crawlId:" + crawlId);
+            } catch (SolrServerException | IOException e) {
+                throw new RuntimeException(e);
+            }
+        }
     }
 
     public void validateVectorField(

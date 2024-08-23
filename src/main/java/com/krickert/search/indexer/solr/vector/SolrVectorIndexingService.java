@@ -38,13 +38,14 @@ public class SolrVectorIndexingService {
                                      SolrInputDocumentQueue solrInputDocumentQueue,
                                      ChunkServiceGrpc.ChunkServiceBlockingStub chunkServiceBlockingStub,
                                      SolrDestinationCollectionValidationService solrDestinationCollectionValidationService) {
+        log.info("creating CreateVectorCollectionService");
         this.embeddingServiceBlockingStub = checkNotNull(embeddingServiceBlockingStub);
         this.indexerConfiguration = checkNotNull(indexerConfiguration);
         this.destinationCollectionName = indexerConfiguration.getDestinationSolrConfiguration().getCollection();
         this.solrInputDocumentQueue = checkNotNull(solrInputDocumentQueue);
         this.chunkServiceBlockingStub = checkNotNull(chunkServiceBlockingStub);
-        log.info("CreateVectorCollectionService created");
         this.solrDestinationCollectionValidationService = solrDestinationCollectionValidationService;
+        log.info("CreateVectorCollectionService created");
     }
 
 

@@ -6,6 +6,14 @@ import com.github.dockerjava.api.model.PortBinding;
 import com.github.dockerjava.api.model.Ports;
 import com.github.dockerjava.api.model.ExposedPort;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
+import com.krickert.search.service.EmbeddingServiceGrpc;
+import io.grpc.ManagedChannel;
+import io.grpc.ManagedChannelBuilder;
+import io.micronaut.context.annotation.Bean;
+import io.micronaut.context.annotation.Replaces;
+import io.micronaut.context.annotation.Requires;
+import io.micronaut.context.env.Environment;
 import jakarta.annotation.PreDestroy;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
@@ -17,6 +25,7 @@ import org.testcontainers.utility.DockerImageName;
 import java.util.List;
 import java.util.Map;
 
+@Requires(notEnv = Environment.DEVELOPMENT)
 @Singleton
 public class ClientGrpcTestContainers {
 
@@ -24,6 +33,10 @@ public class ClientGrpcTestContainers {
 
     private final Map<String, GrpcClientConfig> grpcClientConfigs;
     private final List<GenericContainer<?>> containers = Lists.newArrayList();
+    private final Map<String, GrpcEntry> continerRegistry = Maps.newHashMap();
+
+    record GrpcEntry(String name, String host, Integer grpcPort, Integer restPort) {}
+
 
     @Inject
     public ClientGrpcTestContainers(Map<String, GrpcClientConfig> grpcClientConfigs) {
@@ -54,6 +67,19 @@ public class ClientGrpcTestContainers {
 
             log.info("Container {} started with gRPC port: {}, REST port: {}",
                     config.getDockerImageName(), grpcPort, restPort);
+            final String service;
+            if (config.getDockerImageName().contains("vectorizer")) {
+                service = "vectorizer";
+            } else if (config.getDockerImageName().contains("chunker")) {
+                service = "chunker";
+            } else {
+                service = "unknown";
+            }
+            continerRegistry.put(service, new GrpcEntry(
+                    config.getDockerImageName(),
+                    container.getHost(),
+                    container.getMappedPort(config.getGrpcMappedPort()),
+                    container.getMappedPort(config.getRestMappedPort())));
 
         } catch (Exception e) {
             log.error("Error when starting container for image: " + config.getDockerImageName(), e);
@@ -61,6 +87,10 @@ public class ClientGrpcTestContainers {
             throw e;
         }
         return container;
+    }
+
+    public Integer getGrpcPort(String containerName) {
+        return continerRegistry.get(containerName).grpcPort;
     }
 
     private void configureContainer(CreateContainerCmd cmd, GrpcClientConfig config) {

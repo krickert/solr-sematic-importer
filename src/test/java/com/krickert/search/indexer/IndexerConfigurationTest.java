@@ -105,7 +105,7 @@ public class IndexerConfigurationTest {
         Assertions.assertEquals("cosine", bodyConfig.getSimilarityFunction());
         Assertions.assertEquals(16, bodyConfig.getHnswMaxConnections());
         Assertions.assertEquals(100, bodyConfig.getHnswBeamWidth());
-        Assertions.assertEquals("classpath:default_base_config.zip", bodyConfig.getCollectionCreation().getCollectionConfigFile());
+        Assertions.assertEquals("classpath:default-chunk-config.zip", bodyConfig.getCollectionCreation().getCollectionConfigFile());
         Assertions.assertEquals("vector_config", bodyConfig.getCollectionCreation().getCollectionConfigName());
         Assertions.assertEquals(1, bodyConfig.getCollectionCreation().getNumberOfShards());
         Assertions.assertEquals(2, bodyConfig.getCollectionCreation().getNumberOfReplicas());

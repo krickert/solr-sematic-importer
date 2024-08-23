@@ -30,12 +30,14 @@ public class SolrDestinationCollectionValidationService {
 
     @Inject
     public SolrDestinationCollectionValidationService(IndexerConfiguration indexerConfiguration, SolrAdminActions solrAdminActions, EmbeddingServiceGrpc.EmbeddingServiceBlockingStub embeddingServiceBlockingStub) {
+        log.info("Entering SolrDestinationCollectionValidationService");
         this.indexerConfiguration = indexerConfiguration;
         this.solrAdminActions = solrAdminActions;
         int numberOfDimensions = embeddingServiceBlockingStub.createEmbeddingsVector(
                 EmbeddingsVectorRequest.newBuilder().setText("Dummy").build()).getEmbeddingsCount();
         assert numberOfDimensions > 0;
         this.dimensionality = numberOfDimensions;
+        log.info("Finished creating SolrDestinationCollectionValidationService");
     }
 
     public void validate() {
