@@ -20,7 +20,6 @@
     <release.version>17</release.version>
     <micronaut.version>4.6.0</micronaut.version>
     <exec.mainClass>com.krickert.search.indexer.SolrSemanticImporterCommand</exec.mainClass>
-
     <maven.compiler.source>17</maven.compiler.source>
     <maven.compiler.target>17</maven.compiler.target>
   </properties>

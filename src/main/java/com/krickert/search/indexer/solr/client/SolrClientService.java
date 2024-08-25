@@ -3,6 +3,7 @@ package com.krickert.search.indexer.solr.client;
 import io.micronaut.context.annotation.Bean;
 import io.micronaut.context.annotation.Factory;
 import io.micronaut.context.annotation.Value;
+import io.micronaut.core.annotation.Nullable;
 import io.micronaut.http.HttpResponse;
 import io.micronaut.http.MediaType;
 import io.micronaut.http.client.HttpClient;
@@ -87,7 +88,7 @@ public class SolrClientService {
                           .accept(MediaType.APPLICATION_JSON), Map.class);
 
         if (response.getStatus().getCode() == 200) {
-            Map<String, Object> responseBody = response.body();
+            @Nullable Map responseBody = response.body();
             return (String) responseBody.get("access_token");
         } else {
             throw new RuntimeException("Failed to retrieve access token: " + response.getStatus());

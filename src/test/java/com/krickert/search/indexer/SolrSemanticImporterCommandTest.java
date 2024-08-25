@@ -8,25 +8,23 @@ import io.micronaut.context.env.Environment;
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
 
+import io.micronaut.runtime.EmbeddedApplication;
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
 import jakarta.inject.Inject;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+@MicronautTest(environments = Environment.TEST)
 public class SolrSemanticImporterCommandTest {
 
-    //@Test
-    public void testWithCommandLineOption() throws Exception {
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        System.setOut(new PrintStream(baos));
+    @Inject
+    EmbeddedApplication<?> application;
 
-        try (ApplicationContext ctx = ApplicationContext.run(Environment.CLI, Environment.TEST)) {
-            String[] args = new String[] { "-v" };
-            PicocliRunner.run(SolrSemanticImporterCommand.class, ctx, args);
-
-            // solr-semantic-importer
-            assertTrue(baos.toString().contains("Hi!"));
-        }
+    @Test
+    void testItWorks() {
+        Assertions.assertTrue(application.isRunning());
     }
+
 }

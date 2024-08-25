@@ -74,19 +74,3 @@ vector-config:
       number_of_shards: 1
       number_of_replicas: 2
 
-
-grpc-test-client-config:
-  chunker:
-    grpc-test-port: ${random.port}
-    grpc-mapped-port: 50403
-    rest-test-port: ${random.port}
-    rest-mapped-port: 60403
-    docker-image-name: krickert/chunker:1.0-SNAPSHOT
-
-  vectorizer:
-    grpc-test-port: ${random.port}
-    grpc-mapped-port: 50401
-    rest-test-port: ${random.port}
-    rest-mapped-port: 60401
-    docker-image-name: krickert/vectorizer:1.0-SNAPSHOT
-

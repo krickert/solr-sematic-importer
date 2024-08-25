@@ -11,6 +11,7 @@ import io.micronaut.context.env.Environment;
 import io.micronaut.http.client.HttpClient;
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
 import org.apache.solr.client.solrj.SolrClient;
+import org.apache.solr.client.solrj.impl.Http2SolrClient;
 import org.apache.solr.client.solrj.impl.HttpSolrClient;
 import org.apache.solr.common.SolrInputDocument;
 import org.apache.solr.client.solrj.SolrQuery;
@@ -40,12 +41,12 @@ public class SolrMicronautDevTest {
     ProtobufToSolrDocument protobufToSolrDocument;
 
 
-    SolrClient solrClient = new HttpSolrClient.Builder(SOLR_URL).build();
+    SolrClient solrClient = new Http2SolrClient.Builder(SOLR_URL).build();
 
     @BeforeEach
     public void seedSolrData() throws Exception {
         SolrDynamicClient solrDynamicClient = new SolrDynamicClient(httpClient);
-        try (SolrClient solrClient = new HttpSolrClient.Builder(SOLR_URL).build()) {
+        try (SolrClient solrClient = new Http2SolrClient.Builder(SOLR_URL).build()) {
             solrDynamicClient.createCollection(SOLR_URL, "source_collection");
             Collection<PipeDocument> protos = TestDataHelper.getFewHunderedPipeDocuments().stream().filter(doc -> doc.getDocumentType().equals("ARTICLE")).toList();
             List<SolrInputDocument> solrDocuments = protos.stream().map(protobufToSolrDocument::convertProtobufToSolrDocument).collect(Collectors.toList());

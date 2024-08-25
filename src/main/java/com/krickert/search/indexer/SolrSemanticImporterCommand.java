@@ -2,6 +2,7 @@ package com.krickert.search.indexer;
 
 import io.micronaut.configuration.picocli.PicocliRunner;
 
+import io.micronaut.runtime.Micronaut;
 import jakarta.inject.Inject;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
@@ -10,7 +11,7 @@ import java.io.IOException;
 
 @Command(name = "solr-semantic-importer", description = "...",
         mixinStandardHelpOptions = true)
-public class SolrSemanticImporterCommand implements Runnable {
+public class SolrSemanticImporterCommand {
 
     @Option(names = {"-v", "--verbose"}, description = "...")
     boolean verbose;
@@ -21,19 +22,8 @@ public class SolrSemanticImporterCommand implements Runnable {
     @Inject
     SemanticIndexer semanticIndexer;
 
-    public static void main(String[] args) throws Exception {
-        PicocliRunner.run(SolrSemanticImporterCommand.class, args);
-    }
 
-    public void run() {
-        // business logic here
-        if (verbose) {
-            System.out.println("Hi!");
-        }
-        if (enabled) {
-            semanticIndexer.exportSolrDocsFromExternalSolrCollection(5);
-            System.out.println("Done!");
-            System.exit(0);
-        }
+    public static void main(String[] args) {
+        Micronaut.run(SolrSemanticImporterCommand.class, args);
     }
 }
