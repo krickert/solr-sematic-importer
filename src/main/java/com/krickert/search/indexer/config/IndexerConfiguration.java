@@ -1,5 +1,9 @@
 package com.krickert.search.indexer.config;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.MoreObjects;
+import io.micronaut.serde.annotation.Serdeable;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 
@@ -8,20 +12,31 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 @Singleton
+@JsonInclude(JsonInclude.Include.NON_NULL)
+@Serdeable
 public class IndexerConfiguration {
+
+    @JsonProperty("indexerConfigurationProperties")
     private final IndexerConfigurationProperties indexerConfigurationProperties;
+
+    @JsonProperty("solrConfiguration")
     private final Map<String, SolrConfiguration> solrConfiguration;
+
+    @JsonProperty("vectorConfig")
     private final Map<String, VectorConfig> vectorConfig;
 
     @Inject
-    public IndexerConfiguration(IndexerConfigurationProperties indexerConfigurationProperties, Collection<SolrConfiguration> solrConfigurations, Map<String, VectorConfig> vectorConfig) {
+    public IndexerConfiguration(
+            @JsonProperty("indexerConfigurationProperties") IndexerConfigurationProperties indexerConfigurationProperties,
+            Collection<SolrConfiguration> solrConfigurations,
+            @JsonProperty("vectorConfig") Map<String, VectorConfig> vectorConfig
+    ) {
         this.indexerConfigurationProperties = indexerConfigurationProperties;
         this.vectorConfig = vectorConfig;
         this.solrConfiguration = solrConfigurations.stream()
                 .collect(Collectors.toMap(SolrConfiguration::getName, solrConfiguration -> solrConfiguration));
-
-
     }
+
     public IndexerConfigurationProperties getIndexerConfigurationProperties() {
         return indexerConfigurationProperties;
     }
@@ -36,5 +51,18 @@ public class IndexerConfiguration {
 
     public Map<String, VectorConfig> getVectorConfig() {
         return vectorConfig;
+    }
+
+    protected Map<String, SolrConfiguration> getSolrConfiguration() {
+        return solrConfiguration;
+    }
+
+    @Override
+    public String toString() {
+        return MoreObjects.toStringHelper(this)
+                .add("indexerConfigurationProperties", indexerConfigurationProperties)
+                .add("solrConfiguration", solrConfiguration)
+                .add("vectorConfig", vectorConfig)
+                .toString();
     }
 }

@@ -43,8 +43,7 @@ public class SolrAdminActions {
 
 
     @Inject
-    public SolrAdminActions(
-            @Named("solrClient") SolrClient solrClient, ResourceLoader resourceLoader) {
+    public SolrAdminActions(@Named("solrClient") SolrClient solrClient, ResourceLoader resourceLoader) {
         this.solrClient = checkNotNull(solrClient);
         this.resourceLoader = checkNotNull(resourceLoader);
         log.info("SolrAdminActions is created");

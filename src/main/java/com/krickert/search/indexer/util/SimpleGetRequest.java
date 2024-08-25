@@ -1,4 +1,4 @@
-package com.krickert.search.indexer;
+package com.krickert.search.indexer.util;
 
 import io.micronaut.http.HttpRequest;
 import io.micronaut.http.client.HttpClient;

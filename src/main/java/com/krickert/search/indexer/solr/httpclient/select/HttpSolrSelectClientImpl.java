@@ -2,7 +2,7 @@ package com.krickert.search.indexer.solr.httpclient.select;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.krickert.search.indexer.SimpleGetRequest;
+import com.krickert.search.indexer.util.SimpleGetRequest;
 import io.micronaut.context.annotation.Value;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;

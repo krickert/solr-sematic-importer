@@ -5,9 +5,12 @@ import com.google.protobuf.util.JsonFormat;
 import jakarta.inject.Singleton;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import java.util.*;
-import javax.xml.parsers.*;
-import org.w3c.dom.*;
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import java.util.Map;
 
 @Singleton
 public class ProtobufToSolrSchema {

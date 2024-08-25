@@ -10,11 +10,8 @@ import com.google.common.collect.Maps;
 import com.krickert.search.service.EmbeddingServiceGrpc;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
-import io.micronaut.context.annotation.Bean;
-import io.micronaut.context.annotation.Replaces;
 import io.micronaut.context.annotation.Requires;
 import io.micronaut.context.env.Environment;
-import jakarta.annotation.PreDestroy;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 import org.slf4j.Logger;
@@ -31,22 +28,30 @@ public class ClientGrpcTestContainers {
 
     private static final Logger log = LoggerFactory.getLogger(ClientGrpcTestContainers.class);
 
+    private static final List<GenericContainer<?>> containers = Lists.newArrayList();
+    private static final Map<String, GrpcEntry> containerRegistry = Maps.newHashMap();
+    private static boolean initialized = false;
+
     private final Map<String, GrpcClientConfig> grpcClientConfigs;
-    private final List<GenericContainer<?>> containers = Lists.newArrayList();
-    private final Map<String, GrpcEntry> continerRegistry = Maps.newHashMap();
 
     record GrpcEntry(String name, String host, Integer grpcPort, Integer restPort) {}
-
 
     @Inject
     public ClientGrpcTestContainers(Map<String, GrpcClientConfig> grpcClientConfigs) {
         this.grpcClientConfigs = grpcClientConfigs;
-        containers.add(createContainer(grpcClientConfigs.get("vectorizer")));
-        containers.add(createContainer(grpcClientConfigs.get("chunker")));
-
+        initializeContainers(grpcClientConfigs);
     }
 
-    private GenericContainer<?> createContainer(GrpcClientConfig config) {
+    private synchronized static void initializeContainers(Map<String, GrpcClientConfig> grpcClientConfigs) {
+        if (!initialized) {
+            for (Map.Entry<String, GrpcClientConfig> entry : grpcClientConfigs.entrySet()) {
+                containers.add(createContainer(entry.getValue()));
+            }
+            initialized = true;
+        }
+    }
+
+    private static GenericContainer<?> createContainer(GrpcClientConfig config) {
         DockerImageName imageName = DockerImageName.parse(config.getDockerImageName());
 
         GenericContainer<?> container = new GenericContainer<>(imageName)
@@ -67,15 +72,9 @@ public class ClientGrpcTestContainers {
 
             log.info("Container {} started with gRPC port: {}, REST port: {}",
                     config.getDockerImageName(), grpcPort, restPort);
-            final String service;
-            if (config.getDockerImageName().contains("vectorizer")) {
-                service = "vectorizer";
-            } else if (config.getDockerImageName().contains("chunker")) {
-                service = "chunker";
-            } else {
-                service = "unknown";
-            }
-            continerRegistry.put(service, new GrpcEntry(
+
+            final String service = getServiceName(config.getDockerImageName());
+            containerRegistry.put(service, new GrpcEntry(
                     config.getDockerImageName(),
                     container.getHost(),
                     container.getMappedPort(config.getGrpcMappedPort()),
@@ -89,11 +88,21 @@ public class ClientGrpcTestContainers {
         return container;
     }
 
-    public Integer getGrpcPort(String containerName) {
-        return continerRegistry.get(containerName).grpcPort;
+    private static String getServiceName(String dockerImageName) {
+        if (dockerImageName.contains("vectorizer")) {
+            return "vectorizer";
+        } else if (dockerImageName.contains("chunker")) {
+            return "chunker";
+        } else {
+            return "unknown";
+        }
     }
 
-    private void configureContainer(CreateContainerCmd cmd, GrpcClientConfig config) {
+    public Integer getGrpcPort(String containerName) {
+        return containerRegistry.get(containerName).grpcPort;
+    }
+
+    private static void configureContainer(CreateContainerCmd cmd, GrpcClientConfig config) {
         HostConfig hostConfig = HostConfig.newHostConfig()
                 .withMemory(1024 * 1024 * 1024L)
                 .withMemorySwap(1024 * 1024 * 1024L)
@@ -106,17 +115,9 @@ public class ClientGrpcTestContainers {
         cmd.withHostConfig(hostConfig);
     }
 
-    @PreDestroy
-    public void stopContainers() {
-        for (GenericContainer<?> container : containers) {
-            container.stop();
-        }
-    }
-
     public List<GenericContainer<?>> getContainers() {
         return containers;
     }
-
 
     public Map<String, GrpcClientConfig> getGrpcClientConfigs() {
         return grpcClientConfigs;

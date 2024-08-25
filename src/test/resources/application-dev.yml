@@ -15,7 +15,17 @@ indexer:
   source-seed-data:
     enabled: false
     seed-json-file: sample_solr_result.json
-
+openapi:
+  enabled: true
+  server-url: http://localhost:8080
+  endpoints:
+    swagger-ui:
+      enabled: true
+      path: /swagger-ui
+  paths:
+    - /api/**
+    - /api/solr-admin
+    - /api/config
 solr-config:
   source:
     version: 7.7.3
