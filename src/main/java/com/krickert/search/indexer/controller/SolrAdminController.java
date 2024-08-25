@@ -1,4 +1,4 @@
-package com.krickert.search.indexer;
+package com.krickert.search.indexer.controller;
 
 import com.krickert.search.indexer.solr.httpclient.admin.AddVectorFieldRequest;
 import com.krickert.search.indexer.solr.httpclient.admin.AddVectorTypeFieldRequest;

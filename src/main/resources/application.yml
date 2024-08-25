@@ -1,6 +1,14 @@
 micronaut:
   application:
-    name: solr-semantic-importer
+    name: indexer-web-ui
+  router:
+    static-resources:
+      swagger:
+        paths: classpath:META-INF/swagger
+        mapping: /swagger/**
+      swagger-ui:
+        paths: classpath:META-INF/swagger/views/swagger-ui
+        mapping: /swagger-ui/**
   http:
     services:
       grpc-services:
@@ -40,6 +48,7 @@ solr-config:
       url: http://localhost:8983/solr
       queue-size: 300 #size of each of the blocking queues  queue-size * thread-count = total document queue before blocking
       thread-count: 3 #number of threads to create for the indexing client queue
+      pagination-size: 100 #defaults to 100, optional
       authentication:
         enabled: true
         type: jwt

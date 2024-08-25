@@ -1,13 +1,21 @@
 package com.krickert.search.indexer.config;
 
+import com.google.common.base.MoreObjects;
 import io.micronaut.context.annotation.ConfigurationProperties;
-
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 @ConfigurationProperties("indexer")
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public class IndexerConfigurationProperties {
 
+    @JsonProperty("vectorGrpcChannel")
     private String vectorGrpcChannel;
+
+    @JsonProperty("chunkerGrpcChannel")
     private String chunkerGrpcChannel;
+
+    @JsonProperty("sourceSeedData")
     private SourceSeedData sourceSeedData;
 
     // Getters and Setters
@@ -36,9 +44,13 @@ public class IndexerConfigurationProperties {
     }
 
     @ConfigurationProperties("source-seed-data")
+    @JsonInclude(JsonInclude.Include.NON_NULL)
     public static class SourceSeedData {
 
+        @JsonProperty("enabled")
         private boolean enabled;
+
+        @JsonProperty("seedJsonFile")
         private String seedJsonFile;
 
         // Getters and Setters
@@ -57,6 +69,22 @@ public class IndexerConfigurationProperties {
         public void setSeedJsonFile(String seedJsonFile) {
             this.seedJsonFile = seedJsonFile;
         }
+
+        @Override
+        public String toString() {
+            return MoreObjects.toStringHelper(this)
+                    .add("enabled", enabled)
+                    .add("seedJsonFile", seedJsonFile)
+                    .toString();
+        }
     }
 
+    @Override
+    public String toString() {
+        return MoreObjects.toStringHelper(this)
+                .add("vectorGrpcChannel", vectorGrpcChannel)
+                .add("chunkerGrpcChannel", chunkerGrpcChannel)
+                .add("sourceSeedData", sourceSeedData)
+                .toString();
+    }
 }

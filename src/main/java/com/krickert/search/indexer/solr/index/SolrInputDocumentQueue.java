@@ -1,7 +1,5 @@
 package com.krickert.search.indexer.solr.index;
 
-import io.grpc.StatusRuntimeException;
-import io.micronaut.context.annotation.Value;
 import io.micronaut.retry.annotation.Retryable;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;

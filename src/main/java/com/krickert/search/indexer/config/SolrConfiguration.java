@@ -1,211 +1,312 @@
-   package com.krickert.search.indexer.config;
+package com.krickert.search.indexer.config;
 
-   import io.micronaut.context.annotation.ConfigurationProperties;
-   import io.micronaut.context.annotation.EachProperty;
-   import io.micronaut.context.annotation.Parameter;
-   import io.micronaut.serde.annotation.Serdeable;
+import com.google.common.base.MoreObjects;
+import io.micronaut.context.annotation.ConfigurationProperties;
+import io.micronaut.context.annotation.EachProperty;
+import io.micronaut.context.annotation.Parameter;
+import io.micronaut.serde.annotation.Serdeable;
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
-   @Serdeable
-   @EachProperty("solr-config")
-   public class SolrConfiguration {
-       private String name;
-       private String version;
-       private String collection;
-       private SolrCollectionCreationConfig collectionCreation;
-       private Connection connection;
+@Serdeable
+@EachProperty("solr-config")
+@JsonInclude(JsonInclude.Include.NON_NULL)
+public class SolrConfiguration {
 
-       public SolrConfiguration(@Parameter("name") String name) {
-           this.name = name;
-       }
+    @JsonProperty("name")
+    private String name;
 
-       public String getName() {
-           return name;
-       }
+    @JsonProperty("version")
+    private String version;
 
-       public void setName(String name) {
-           this.name = name;
-       }
+    @JsonProperty("collection")
+    private String collection;
 
-       public String getVersion() {
-           return version;
-       }
+    @JsonProperty("collectionCreation")
+    private SolrCollectionCreationConfig collectionCreation;
 
-       public void setVersion(String version) {
-           this.version = version;
-       }
+    @JsonProperty("connection")
+    private Connection connection;
 
-       public String getCollection() {
-           return collection;
-       }
+    public SolrConfiguration(@Parameter("name") String name) {
+        this.name = name;
+    }
 
-       public SolrCollectionCreationConfig getCollectionCreation() {
-           return collectionCreation;
-       }
-       public void setCollectionCreation(SolrCollectionCreationConfig collectionCreation) {
-           this.collectionCreation = collectionCreation;
-       }
-       public void setCollection(String collection) {
-           this.collection = collection;
-       }
+    public String getName() {
+        return name;
+    }
 
-       public Connection getConnection() {
-           return connection;
-       }
+    public void setName(String name) {
+        this.name = name;
+    }
 
-       public void setConnection(Connection connection) {
-           this.connection = connection;
-       }
+    public String getVersion() {
+        return version;
+    }
 
-       @Serdeable
-       @ConfigurationProperties("collection-creation")
-       public static class SolrCollectionCreationConfig {
-           private String collectionConfigFile;
-           private String collectionConfigName;
-           private int numberOfShards;
-           private int numberOfReplicas;
+    public void setVersion(String version) {
+        this.version = version;
+    }
 
-           public String getCollectionConfigFile() {
-               return collectionConfigFile;
-           }
+    public String getCollection() {
+        return collection;
+    }
 
-           public void setCollectionConfigFile(String collectionConfigFile) {
-               this.collectionConfigFile = collectionConfigFile;
-           }
+    public void setCollection(String collection) {
+        this.collection = collection;
+    }
 
-           public String getCollectionConfigName() {
-               return collectionConfigName;
-           }
+    public SolrCollectionCreationConfig getCollectionCreation() {
+        return collectionCreation;
+    }
 
-           public void setCollectionConfigName(String collectionConfigName) {
-               this.collectionConfigName = collectionConfigName;
-           }
+    public void setCollectionCreation(SolrCollectionCreationConfig collectionCreation) {
+        this.collectionCreation = collectionCreation;
+    }
 
-           public int getNumberOfShards() {
-               return numberOfShards;
-           }
+    public Connection getConnection() {
+        return connection;
+    }
 
-           public void setNumberOfShards(int numberOfShards) {
-               this.numberOfShards = numberOfShards;
-           }
+    public void setConnection(Connection connection) {
+        this.connection = connection;
+    }
 
-           public int getNumberOfReplicas() {
-               return numberOfReplicas;
-           }
+    @Override
+    public String toString() {
+        return MoreObjects.toStringHelper(this)
+                .add("name", name)
+                .add("version", version)
+                .add("collection", collection)
+                .add("collectionCreation", collectionCreation)
+                .add("connection", connection)
+                .toString();
+    }
 
-           public void setNumberOfReplicas(int numberOfReplicas) {
-               this.numberOfReplicas = numberOfReplicas;
-           }
-       }
+    @Serdeable
+    @ConfigurationProperties("collection-creation")
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    public static class SolrCollectionCreationConfig {
 
-       @Serdeable
-       @ConfigurationProperties("connection")
-       public static class Connection {
-           private String url;
-           private Authentication authentication;
-           private Integer queueSize;
-           private Integer threadCount;
+        @JsonProperty("collectionConfigFile")
+        private String collectionConfigFile;
 
-           // Getters and Setters
-           public String getUrl() {
-               return url;
-           }
+        @JsonProperty("collectionConfigName")
+        private String collectionConfigName;
 
-           public void setUrl(String url) {
-               this.url = url;
-           }
+        @JsonProperty("numberOfShards")
+        private int numberOfShards;
 
-           public Authentication getAuthentication() {
-               return authentication;
-           }
+        @JsonProperty("numberOfReplicas")
+        private int numberOfReplicas;
 
-           public void setAuthentication(Authentication authentication) {
-               this.authentication = authentication;
-           }
+        public String getCollectionConfigFile() {
+            return collectionConfigFile;
+        }
 
-           public Integer getQueueSize() {
-               return queueSize;
-           }
+        public void setCollectionConfigFile(String collectionConfigFile) {
+            this.collectionConfigFile = collectionConfigFile;
+        }
 
-           public void setQueueSize(Integer queueSize) {
-               this.queueSize = queueSize;
-           }
+        public String getCollectionConfigName() {
+            return collectionConfigName;
+        }
 
-           public Integer getThreadCount() {
-               return threadCount;
-           }
+        public void setCollectionConfigName(String collectionConfigName) {
+            this.collectionConfigName = collectionConfigName;
+        }
 
-           public void setThreadCount(Integer threadCount) {
-               this.threadCount = threadCount;
-           }
+        public int getNumberOfShards() {
+            return numberOfShards;
+        }
 
+        public void setNumberOfShards(int numberOfShards) {
+            this.numberOfShards = numberOfShards;
+        }
 
-           @Serdeable
-           @ConfigurationProperties("authentication")
-           public static class Authentication {
-               private boolean enabled;
-               private String type;
-               private String clientSecret;
-               private String clientId;
-               private String issuer;
-               private String issuerAuthId;
-               private String subject;
+        public int getNumberOfReplicas() {
+            return numberOfReplicas;
+        }
 
-               // Getters and Setters
-               public boolean isEnabled() {
-                   return enabled;
-               }
+        public void setNumberOfReplicas(int numberOfReplicas) {
+            this.numberOfReplicas = numberOfReplicas;
+        }
+        @Override
+        public String toString() {
+            return MoreObjects.toStringHelper(this)
+                    .add("collectionConfigFile", collectionConfigFile)
+                    .add("collectionConfigName", collectionConfigName)
+                    .add("numberOfShards", numberOfShards)
+                    .add("numberOfReplicas", numberOfReplicas)
+                    .toString();
+        }
+    }
 
-               public void setEnabled(boolean enabled) {
-                   this.enabled = enabled;
-               }
+    @Serdeable
+    @ConfigurationProperties("connection")
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    public static class Connection {
 
-               public String getType() {
-                   return type;
-               }
+        @JsonProperty("url")
+        private String url;
 
-               public void setType(String type) {
-                   this.type = type;
-               }
+        @JsonProperty("authentication")
+        private Authentication authentication;
 
-               public String getClientSecret() {
-                   return clientSecret;
-               }
+        @JsonProperty("queue-size")
+        private Integer queueSize;
 
-               public void setClientSecret(String clientSecret) {
-                   this.clientSecret = clientSecret;
-               }
+        @JsonProperty("thread-count")
+        private Integer threadCount;
 
-               public String getClientId() {
-                   return clientId;
-               }
+        @JsonProperty("pagination-size")
+        private Integer paginationSize;
 
-               public void setClientId(String clientId) {
-                   this.clientId = clientId;
-               }
+        public String getUrl() {
+            return url;
+        }
 
-               public String getIssuer() {
-                   return issuer;
-               }
+        public void setUrl(String url) {
+            this.url = url;
+        }
 
-               public void setIssuer(String issuer) {
-                   this.issuer = issuer;
-               }
+        public Authentication getAuthentication() {
+            return authentication;
+        }
 
-               public String getIssuerAuthId() {
-                   return issuerAuthId;
-               }
+        public void setAuthentication(Authentication authentication) {
+            this.authentication = authentication;
+        }
 
-               public void setIssuerAuthId(String issuerAuthId) {
-                   this.issuerAuthId = issuerAuthId;
-               }
+        public Integer getQueueSize() {
+            return queueSize;
+        }
 
-               public String getSubject() {
-                   return subject;
-               }
+        public void setQueueSize(Integer queueSize) {
+            this.queueSize = queueSize;
+        }
 
-               public void setSubject(String subject) {
-                   this.subject = subject;
-               }
-           }
-       }
-   }
+        public Integer getThreadCount() {
+            return threadCount;
+        }
+
+        public void setThreadCount(Integer threadCount) {
+            this.threadCount = threadCount;
+        }
+
+        public Integer getPaginationSize() {
+            return paginationSize;
+        }
+
+        public void setPaginationSize(Integer paginationSize) {
+            this.paginationSize = paginationSize;
+        }
+
+        @Override
+        public String toString() {
+            return MoreObjects.toStringHelper(this)
+                    .add("url", url)
+                    .add("authentication", authentication)
+                    .add("queueSize", queueSize)
+                    .add("threadCount", threadCount)
+                    .add("paginationSize", paginationSize)
+                    .toString();
+        }
+
+        @Serdeable
+        @ConfigurationProperties("authentication")
+        @JsonInclude(JsonInclude.Include.NON_NULL)
+        public static class Authentication {
+
+            @JsonProperty("enabled")
+            private boolean enabled;
+
+            @JsonProperty("type")
+            private String type;
+
+            @JsonProperty("clientSecret")
+            private String clientSecret;
+
+            @JsonProperty("clientId")
+            private String clientId;
+
+            @JsonProperty("issuer")
+            private String issuer;
+
+            @JsonProperty("issuerAuthId")
+            private String issuerAuthId;
+
+            @JsonProperty("subject")
+            private String subject;
+
+            public boolean isEnabled() {
+                return enabled;
+            }
+
+            public void setEnabled(boolean enabled) {
+                this.enabled = enabled;
+            }
+
+            public String getType() {
+                return type;
+            }
+
+            public void setType(String type) {
+                this.type = type;
+            }
+
+            public String getClientSecret() {
+                return clientSecret;
+            }
+
+            public void setClientSecret(String clientSecret) {
+                this.clientSecret = clientSecret;
+            }
+
+            public String getClientId() {
+                return clientId;
+            }
+
+            public void setClientId(String clientId) {
+                this.clientId = clientId;
+            }
+
+            public String getIssuer() {
+                return issuer;
+            }
+
+            public void setIssuer(String issuer) {
+                this.issuer = issuer;
+            }
+
+            public String getIssuerAuthId() {
+                return issuerAuthId;
+            }
+
+            public void setIssuerAuthId(String issuerAuthId) {
+                this.issuerAuthId = issuerAuthId;
+            }
+
+            public String getSubject() {
+                return subject;
+            }
+
+            public void setSubject(String subject) {
+                this.subject = subject;
+            }
+
+            @Override
+            public String toString() {
+                return MoreObjects.toStringHelper(this)
+                        .add("enabled", enabled)
+                        .add("type", type)
+                        .add("clientSecret", clientSecret)
+                        .add("clientId", clientId)
+                        .add("issuer", issuer)
+                        .add("issuerAuthId", issuerAuthId)
+                        .add("subject", subject)
+                        .toString();
+            }
+        }
+    }
+}

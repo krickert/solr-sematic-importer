@@ -1,6 +1,5 @@
 package com.krickert.search.indexer.config.mapper;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.krickert.search.indexer.config.IndexerConfigurationProperties;
 import com.krickert.search.indexer.grpc.IndexerConfiguration;
 import com.krickert.search.indexer.grpc.SourceSeedData;

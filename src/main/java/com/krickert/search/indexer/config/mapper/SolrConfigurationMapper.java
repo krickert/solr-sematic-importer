@@ -40,7 +40,11 @@ public class SolrConfigurationMapper {
                 .setUrl(config.getUrl() != null ? config.getUrl() : "")
                 .setQueueSize(config.getQueueSize() != null ? config.getQueueSize() : 0)
                 .setThreadCount(config.getThreadCount() != null ? config.getThreadCount() : 0);
-
+        if (config.getPaginationSize() != null) {
+            builder.setPaginationSize(config.getPaginationSize());
+        } else {
+            builder.setPaginationSize(100);
+        }
         if (config.getAuthentication() != null) {
             builder.setAuthentication(toProtobuf(config.getAuthentication()));
         } else {
@@ -94,6 +98,7 @@ public class SolrConfigurationMapper {
         config.setUrl(proto.getUrl().isEmpty() ? null : proto.getUrl());
         config.setQueueSize(proto.getQueueSize() == 0 ? null : proto.getQueueSize());
         config.setThreadCount(proto.getThreadCount() == 0 ? null : proto.getThreadCount());
+        config.setPaginationSize(proto.getPaginationSize() == 0 ? null : proto.getPaginationSize());
         config.setAuthentication(fromProtobuf(proto.getAuthentication()));
         return config;
     }

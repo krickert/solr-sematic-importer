@@ -24,6 +24,7 @@ solr-config:
       url: http://localhost:${solr7-test-port}/solr
       authentication:
         enabled: false
+      pagination-size: 10
   destination:
     version: 9.6.1
     collection: destination_collection

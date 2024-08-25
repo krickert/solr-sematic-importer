@@ -1,8 +1,11 @@
 package com.krickert.search.indexer.solr.client;
 
+import com.krickert.search.indexer.config.IndexerConfiguration;
 import io.micronaut.context.annotation.Bean;
 import io.micronaut.context.annotation.Factory;
+import io.micronaut.context.annotation.Requires;
 import io.micronaut.context.annotation.Value;
+import io.micronaut.context.env.Environment;
 import io.micronaut.core.annotation.Nullable;
 import io.micronaut.http.HttpResponse;
 import io.micronaut.http.MediaType;
@@ -10,12 +13,11 @@ import io.micronaut.http.client.HttpClient;
 import io.micronaut.http.client.annotation.Client;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
-import jakarta.inject.Qualifier;
 import org.apache.solr.client.solrj.SolrClient;
+import org.apache.solr.client.solrj.SolrRequest;
 import org.apache.solr.client.solrj.impl.ConcurrentUpdateHttp2SolrClient;
 import org.apache.solr.client.solrj.impl.Http2SolrClient;
 import org.apache.solr.client.solrj.request.RequestWriter;
-import org.apache.solr.client.solrj.SolrRequest;
 import org.eclipse.jetty.http.HttpHeader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -28,6 +30,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 
 @Factory
+@Requires(notEnv = Environment.TEST)
 public class SolrClientService {
     private static final Logger log = LoggerFactory.getLogger(SolrClientService.class);
     @Value("${solr-config.destination.connection.authentication.issuer}")
@@ -53,9 +56,9 @@ public class SolrClientService {
 
     @Bean
     @Named("solrClient")
-    public Http2SolrClient createSolrClient(
-            @Value("${solr-config.destination.connection.url}") String solrUrl,
-            @Value("${solr-config.destination.collection}") String collection) {
+    public Http2SolrClient createSolrClient(IndexerConfiguration indexerConfiguration) {
+        String solrUrl = indexerConfiguration.getDestinationSolrConfiguration().getConnection().getUrl();
+        String collection = indexerConfiguration.getDestinationSolrConfiguration().getCollection();
         return new Http2SolrClient.Builder(solrUrl)
                 .withDefaultCollection(collection)
                 .withFollowRedirects(true)
@@ -65,14 +68,12 @@ public class SolrClientService {
 
     @Bean
     @Named("concurrentClient")
-    public ConcurrentUpdateHttp2SolrClient createConcurrentUpdateSolrClient(
-            Http2SolrClient solrClient,
-            @Value("${solr-config.destination.connection.url}") String solrUrl,
-            @Value("${solr-config.destination.connection.queue-size}") Integer queueSize,
-            @Value("${solr-config.destination.connection.thread-count}") Integer threadCount) {
+    public ConcurrentUpdateHttp2SolrClient createConcurrentUpdateSolrClient(IndexerConfiguration indexerConfiguration) {
+        String solrUrl = indexerConfiguration.getDestinationSolrConfiguration().getConnection().getUrl();
+        Http2SolrClient solrClient = createSolrClient(indexerConfiguration);
         return new ConcurrentUpdateHttp2SolrClient.Builder(solrUrl, solrClient, false)
-                .withQueueSize(queueSize)
-                .withThreadCount(threadCount)
+                .withQueueSize(indexerConfiguration.getDestinationSolrConfiguration().getConnection().getQueueSize())
+                .withThreadCount(indexerConfiguration.getDestinationSolrConfiguration().getConnection().getThreadCount())
                 .build();
     }
 
