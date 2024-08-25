@@ -6,9 +6,11 @@ import io.micronaut.context.annotation.EachProperty;
 import io.micronaut.core.annotation.Introspected;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import io.micronaut.serde.annotation.Serdeable;
 
 @EachProperty("vector-config")
 @Introspected
+@Serdeable
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class VectorConfig {
 
@@ -140,6 +142,7 @@ public class VectorConfig {
 
     @ConfigurationProperties("collection-creation")
     @JsonInclude(JsonInclude.Include.NON_NULL)
+    @Serdeable
     public static class VectorCollectionCreationConfig {
 
         @JsonProperty("collectionConfigFile")

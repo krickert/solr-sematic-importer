@@ -3,6 +3,7 @@ package com.krickert.search.indexer.config;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.MoreObjects;
+import io.micronaut.serde.annotation.Serdeable;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 
@@ -12,6 +13,7 @@ import java.util.stream.Collectors;
 
 @Singleton
 @JsonInclude(JsonInclude.Include.NON_NULL)
+@Serdeable
 public class IndexerConfiguration {
 
     @JsonProperty("indexerConfigurationProperties")

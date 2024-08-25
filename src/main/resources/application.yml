@@ -15,6 +15,7 @@ micronaut:
         retry:
           attempts: 5
           delay: 500ms
+
 grpc:
   client:
     plaintext: true

@@ -15,7 +15,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.Map;
 
-@Controller("/solrAdmin")
+@Controller("/api/solr-admin")
 public class SolrAdminController {
 
     private static final Logger log = LoggerFactory.getLogger(SolrAdminController.class);

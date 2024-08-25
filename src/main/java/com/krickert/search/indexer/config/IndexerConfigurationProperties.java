@@ -4,9 +4,11 @@ import com.google.common.base.MoreObjects;
 import io.micronaut.context.annotation.ConfigurationProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import io.micronaut.serde.annotation.Serdeable;
 
 @ConfigurationProperties("indexer")
 @JsonInclude(JsonInclude.Include.NON_NULL)
+@Serdeable
 public class IndexerConfigurationProperties {
 
     @JsonProperty("vectorGrpcChannel")
@@ -45,6 +47,7 @@ public class IndexerConfigurationProperties {
 
     @ConfigurationProperties("source-seed-data")
     @JsonInclude(JsonInclude.Include.NON_NULL)
+    @Serdeable
     public static class SourceSeedData {
 
         @JsonProperty("enabled")
