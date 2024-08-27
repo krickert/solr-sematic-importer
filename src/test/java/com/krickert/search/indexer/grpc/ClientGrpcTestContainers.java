@@ -14,6 +14,7 @@ import io.micronaut.context.annotation.Requires;
 import io.micronaut.context.env.Environment;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
+import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.testcontainers.containers.GenericContainer;
@@ -81,7 +82,7 @@ public class ClientGrpcTestContainers {
                     container.getMappedPort(config.getRestMappedPort())));
 
         } catch (Exception e) {
-            log.error("Error when starting container for image: " + config.getDockerImageName(), e);
+            log.error("Error when starting container for image {}, exception: {}", config.getDockerImageName(), ExceptionUtils.getStackTrace(e));
             container.stop();
             throw e;
         }

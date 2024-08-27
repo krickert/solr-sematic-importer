@@ -70,7 +70,7 @@ public class IndexerConfigurationTest {
         assertEquals(1, destConfig.getCollectionCreation().getNumberOfShards());
         assertEquals(2, destConfig.getCollectionCreation().getNumberOfReplicas());
         SolrConfiguration.Connection.Authentication destAuth = destConnection.getAuthentication();
-        assertTrue(destAuth.isEnabled());
+        assertFalse(destAuth.isEnabled());
         assertEquals("jwt", destAuth.getType());
         assertEquals("my-client-secret", destAuth.getClientSecret());
         assertEquals("my-client-id", destAuth.getClientId());

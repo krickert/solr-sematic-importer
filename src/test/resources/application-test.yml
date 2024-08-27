@@ -20,6 +20,9 @@ openapi:
 
 solr9-test-port: ${random.port}
 solr7-test-port: ${random.port}
+indexer-manager:
+  max-history-size: 100
+
 indexer:
   vector-grpc-channel: "localhost:${grpc-test-client-config.vectorizer.grpc-test-port}"
   chunker-grpc-channel: "localhost:${grpc-test-client-config.chunker.grpc-test-port}"
@@ -49,7 +52,7 @@ solr-config:
       queue-size: 300 #size of each of the blocking queues  queue-size * thread-count = total document queue before blocking
       thread-count: 3 #number of threads to create for the indexing client queue
       authentication:
-        enabled: true
+        enabled: false
         type: jwt
         client-secret: my-client-secret
         client-id: my-client-id

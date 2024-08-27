@@ -9,6 +9,13 @@ micronaut:
 
 solr9-test-port: 8983
 solr7-test-port: 8980
+indexer-manager:
+  max-history-size: 100
+
+logger:
+  levels:
+    io.micronaut.security: DEBUG
+
 indexer:
   vector-grpc-channel: "localhost:50401"
   chunker-grpc-channel: "localhost:50403"
@@ -43,15 +50,15 @@ solr-config:
       number_of_shards: 1
       number_of_replicas: 2
     connection:
-      url: http://localhost:8983/solr
+      url: http://rokkon.com:8983/solr
       queue-size: 300 #size of each of the blocking queues  queue-size * thread-count = total document queue before blocking
       thread-count: 3 #number of threads to create for the indexing client queue
       authentication:
         enabled: true
         type: jwt
-        client-secret: my-client-secret
-        client-id: my-client-id
-        issuer: https://my-token-url.com/oauth2/some-token/v1/token
+        client-secret: "gCc8ABmPoHLGCdyiPMbqdPgQnj-yzNN2pJvzXR1rVsWpUQ8cgbZJDKZk-m07Xy2m"
+        client-id: "0oaj7tu2ehuix5y6j5d7"
+        issuer: https://dev-28615306.okta.com/oauth2/default/v1/token
         issuerAuthId: issuer-auth-id
         subject: your-subject
 

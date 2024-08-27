@@ -14,16 +14,16 @@ public class IndexerConfigurationService extends IndexerConfigurationServiceImpl
 
     private final Map<String, IndexerConfiguration> configurations = new ConcurrentHashMap<>();
 
-    @Property(name = "indexer.default.vector-grpc-channel")
+    @Property(name = "indexer.vector-grpc-channel")
     private String defaultVectorGrpcChannel;
 
-    @Property(name = "indexer.default.chunker-grpc-channel")
+    @Property(name = "indexer.chunker-grpc-channel")
     private String defaultChunkerGrpcChannel;
 
-    @Property(name = "indexer.default.source-seed-data.enabled")
+    @Property(name = "indexer.source-seed-data.enabled")
     private boolean defaultSourceSeedDataEnabled;
 
-    @Property(name = "indexer.default.source-seed-data.seed-json-file")
+    @Property(name = "indexer.source-seed-data.seed-json-file")
     private String defaultSeedJsonFile;
 
     @Override

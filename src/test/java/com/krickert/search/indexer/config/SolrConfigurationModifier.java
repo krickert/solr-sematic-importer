@@ -11,16 +11,15 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 @Factory
-public class ConfigurationModifier {
+public class SolrConfigurationModifier {
 
-    private static final Logger log = LoggerFactory.getLogger(ConfigurationModifier.class);
+    private static final Logger log = LoggerFactory.getLogger(SolrConfigurationModifier.class);
     private final IndexerConfiguration originalConfiguration;
-    private final String solr7Url;
     private final String solr9Url;
 
-    public ConfigurationModifier(IndexerConfiguration originalConfiguration, SolrTestContainers solrTestContainers) {
+    public SolrConfigurationModifier(IndexerConfiguration originalConfiguration, SolrTestContainers solrTestContainers) {
         this.originalConfiguration = originalConfiguration;
-        this.solr7Url = "http://" + solrTestContainers.getContainer7().getHost() + ":" + solrTestContainers.getContainer7().getSolrPort() + "/solr";
+        String solr7Url = "http://" + solrTestContainers.getContainer7().getHost() + ":" + solrTestContainers.getContainer7().getSolrPort() + "/solr";
         this.solr9Url = "http://" + solrTestContainers.getContainer9().getHost() + ":" + solrTestContainers.getContainer9().getSolrPort() + "/solr";
         log.info("setting the configuration so it has:\n\tsolr7Url: {}\n\tsolr9Url: {}", solr7Url, solr9Url);
         originalConfiguration.getSourceSolrConfiguration().getConnection().setUrl(solr7Url);

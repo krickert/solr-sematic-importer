@@ -16,13 +16,16 @@ import java.util.stream.Collectors;
 @Serdeable
 public class IndexerConfiguration {
 
-    @JsonProperty("indexerConfigurationProperties")
+    @JsonProperty("name")
+    private String name = "default";
+
+    @JsonProperty("indexer_config")
     private final IndexerConfigurationProperties indexerConfigurationProperties;
 
-    @JsonProperty("solrConfiguration")
+    @JsonProperty("solr_config")
     private final Map<String, SolrConfiguration> solrConfiguration;
 
-    @JsonProperty("vectorConfig")
+    @JsonProperty("vector_config")
     private final Map<String, VectorConfig> vectorConfig;
 
     @Inject
@@ -64,5 +67,13 @@ public class IndexerConfiguration {
                 .add("solrConfiguration", solrConfiguration)
                 .add("vectorConfig", vectorConfig)
                 .toString();
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
     }
 }
