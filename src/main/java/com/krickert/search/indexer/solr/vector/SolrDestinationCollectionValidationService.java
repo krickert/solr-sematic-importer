@@ -3,10 +3,12 @@ package com.krickert.search.indexer.solr.vector;
 import com.krickert.search.indexer.config.IndexerConfiguration;
 import com.krickert.search.indexer.config.SolrConfiguration;
 import com.krickert.search.indexer.config.VectorConfig;
+import com.krickert.search.indexer.service.HealthService;
 import com.krickert.search.indexer.solr.client.SolrAdminActions;
 import com.krickert.search.service.EmbeddingServiceGrpc;
 import com.krickert.search.service.EmbeddingsVectorRequest;
 import io.micronaut.core.util.StringUtils;
+import io.micronaut.scheduling.annotation.Scheduled;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 import org.apache.solr.client.solrj.SolrServerException;
@@ -15,29 +17,65 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
+
+import static com.google.common.base.Preconditions.checkNotNull;
 
 @Singleton
 public class SolrDestinationCollectionValidationService {
     private static final Logger log = LoggerFactory.getLogger(SolrDestinationCollectionValidationService.class);
+
     private final IndexerConfiguration indexerConfiguration;
     private final SolrAdminActions solrAdminActions;
+    private final EmbeddingServiceGrpc.EmbeddingServiceBlockingStub embeddingServiceBlockingStub;
     private final Integer dimensionality;
+    private final HealthService healthService;
+    private final AtomicBoolean embeddingsUp = new AtomicBoolean(false);
 
-    public Integer getDimensionality() {
-        return dimensionality;
+
+    @Scheduled(fixedRate = "20s")
+    public void checkEmbeddingsUp() {
+        if (healthService.checkVectorizerHealth()) {
+            if (dimensionality == null || dimensionality < 1) {
+                initializeDimensionality();
+            }
+            embeddingsUp.set(true);
+        }
+        if (!embeddingsUp.get()) {
+            log.error("Embeddings are not up");
+        }
+
     }
 
     @Inject
-    public SolrDestinationCollectionValidationService(IndexerConfiguration indexerConfiguration, SolrAdminActions solrAdminActions, EmbeddingServiceGrpc.EmbeddingServiceBlockingStub embeddingServiceBlockingStub) {
-        log.info("Entering SolrDestinationCollectionValidationService");
+    public SolrDestinationCollectionValidationService(IndexerConfiguration indexerConfiguration, SolrAdminActions solrAdminActions, EmbeddingServiceGrpc.EmbeddingServiceBlockingStub embeddingServiceBlockingStub, HealthService healthService) {
         this.indexerConfiguration = indexerConfiguration;
         this.solrAdminActions = solrAdminActions;
-        int numberOfDimensions = embeddingServiceBlockingStub.createEmbeddingsVector(
-                EmbeddingsVectorRequest.newBuilder().setText("Dummy").build()).getEmbeddingsCount();
-        assert numberOfDimensions > 0;
-        this.dimensionality = numberOfDimensions;
-        log.info("Finished creating SolrDestinationCollectionValidationService");
+        this.embeddingServiceBlockingStub = embeddingServiceBlockingStub;
+        this.healthService = checkNotNull(healthService);
+        this.dimensionality = initializeDimensionality();
+    }
+
+    private Integer initializeDimensionality() {
+        log.info("Initializing dimensionality by creating embeddings vector");
+        try {
+            int numberOfDimensions = embeddingServiceBlockingStub.createEmbeddingsVector(
+                    EmbeddingsVectorRequest.newBuilder().setText("Dummy").build()).getEmbeddingsCount();
+            assert numberOfDimensions > 0;
+            log.info("Finished initializing dimensionality");
+            embeddingsUp.set(true);
+            return numberOfDimensions;
+        } catch (Exception e) {
+            log.error("Failed to initialize dimensionality due to: {}", e.getMessage(), e);
+            embeddingsUp.set(false);
+            // Return a default dimensionality when exception occurs
+            return null; // if dimensions do no exist make it null
+        }
+    }
+
+    public Integer getDimensionality() {
+        return dimensionality;
     }
 
     public void validate() {
@@ -49,7 +87,7 @@ public class SolrDestinationCollectionValidationService {
 
     private void validateVectorCollections() {
         Map<String, VectorConfig> configs = indexerConfiguration.getVectorConfig();
-        // Partition the map into two maps based on getChunkField method
+
         Map<Boolean, Map<String, VectorConfig>> partitionedMaps = configs.entrySet()
                 .stream()
                 .collect(Collectors.partitioningBy(
@@ -57,11 +95,10 @@ public class SolrDestinationCollectionValidationService {
                         Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue)
                 ));
 
-        // Maps based on the value of getChunkField
-        Map<String, VectorConfig> inlineConfigs = partitionedMaps.get(false);  // Map with getChunkField() == false
+        Map<String, VectorConfig> inlineConfigs = partitionedMaps.get(false);
         inlineConfigs.forEach(this::validateInlineConfig);
 
-        Map<String, VectorConfig> chunkFieldTrue = partitionedMaps.get(true);  // Map with getChunkField() == true
+        Map<String, VectorConfig> chunkFieldTrue = partitionedMaps.get(true);
         chunkFieldTrue.forEach(this::validateChunkFieldConfig);
     }
 
@@ -118,7 +155,6 @@ public class SolrDestinationCollectionValidationService {
         } else {
             SolrConfiguration destinationSolrConfiguration = indexerConfiguration.getDestinationSolrConfiguration();
             String destinationCollection = destinationSolrConfiguration.getCollection();
-            //create the collection
             solrAdminActions.createCollection(destinationCollection, destinationSolrConfiguration.getCollectionCreation());
         }
     }

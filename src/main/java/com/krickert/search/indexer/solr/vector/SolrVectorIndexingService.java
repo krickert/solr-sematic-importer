@@ -2,6 +2,7 @@ package com.krickert.search.indexer.solr.vector;
 
 import com.krickert.search.indexer.config.IndexerConfiguration;
 import com.krickert.search.indexer.config.VectorConfig;
+import com.krickert.search.indexer.dto.SolrDocumentType;
 import com.krickert.search.indexer.solr.index.SolrInputDocumentQueue;
 import com.krickert.search.service.*;
 import io.micronaut.retry.annotation.Retryable;
@@ -25,6 +26,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 public class SolrVectorIndexingService {
 
     private static final Logger log = LoggerFactory.getLogger(SolrVectorIndexingService.class);
+
     private final EmbeddingServiceGrpc.EmbeddingServiceBlockingStub embeddingServiceBlockingStub;
     private final ChunkServiceGrpc.ChunkServiceBlockingStub chunkServiceBlockingStub;
     private final IndexerConfiguration indexerConfiguration;
@@ -68,7 +70,7 @@ public class SolrVectorIndexingService {
             }
         });
 
-        solrInputDocumentQueue.addDocument(destinationCollectionName, solrInputDocument);
+        solrInputDocumentQueue.addDocument(destinationCollectionName, solrInputDocument, SolrDocumentType.DOCUMENT);
     }
 
 
@@ -94,7 +96,8 @@ public class SolrVectorIndexingService {
                         chunkerReply.getChunksList().stream().toList(),
                         origDocId, crawlId, dateCreated,
                         indexerConfiguration.getDestinationSolrConfiguration().getCollection(),
-                        vectorConfig.getChunkFieldVectorName(),solrDestinationCollectionValidationService.getDimensionality()));
+                        vectorConfig.getChunkFieldVectorName(),solrDestinationCollectionValidationService.getDimensionality()),
+                SolrDocumentType.VECTOR);
     }
 
 

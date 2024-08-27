@@ -1,15 +1,15 @@
 package com.krickert.search.indexer;
 
-import com.google.protobuf.DynamicMessage;
-import com.google.protobuf.Message;
 import com.krickert.search.indexer.config.IndexerConfiguration;
+import com.krickert.search.indexer.dto.SolrDocumentType;
 import com.krickert.search.indexer.solr.JsonToSolrDocParser;
 import com.krickert.search.indexer.solr.client.SolrAdminActions;
 import com.krickert.search.indexer.solr.httpclient.select.HttpSolrSelectClient;
 import com.krickert.search.indexer.solr.httpclient.select.HttpSolrSelectResponse;
+import com.krickert.search.indexer.solr.index.SolrInputDocumentQueue;
 import com.krickert.search.indexer.solr.vector.SolrDestinationCollectionValidationService;
 import com.krickert.search.indexer.solr.vector.SolrVectorIndexingService;
-import com.krickert.search.model.pipe.PipeDocument;
+import com.krickert.search.indexer.tracker.IndexingTracker;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 import org.apache.solr.common.SolrInputDocument;
@@ -38,26 +38,29 @@ public class SolrSemanticIndexer implements SemanticIndexer {
     private final SolrDestinationCollectionValidationService solrDestinationCollectionValidationService;
     private final SolrVectorIndexingService solrIndexingService;
     private final SolrAdminActions solrAdminActions;
-
+    private final SolrInputDocumentQueue solrInputDocumentQueue;
+    private final IndexingTracker indexingTracker;
 
     @Inject
     public SolrSemanticIndexer(HttpSolrSelectClient httpSolrSelectClient,
                                JsonToSolrDocParser jsonToSolrDoc,
                                IndexerConfiguration defaultIndexerConfiguration,
                                SolrDestinationCollectionValidationService solrDestinationCollectionValidationService,
-                               SolrVectorIndexingService createVectorCollectionService,
-                               SolrAdminActions solrAdminActions) {
-
+                               SolrVectorIndexingService solrIndexingService,
+                               SolrAdminActions solrAdminActions,
+                               SolrInputDocumentQueue solrInputDocumentQueue,
+                               IndexingTracker indexingTracker) {
         log.info("creating SemanticIndexer");
         this.httpSolrSelectClient = checkNotNull(httpSolrSelectClient);
-        this.jsonToSolrDoc =  checkNotNull(jsonToSolrDoc);
-        this.defaultIndexerConfiguration =  checkNotNull(defaultIndexerConfiguration);
+        this.jsonToSolrDoc = checkNotNull(jsonToSolrDoc);
+        this.defaultIndexerConfiguration = checkNotNull(defaultIndexerConfiguration);
         this.solrDestinationCollectionValidationService = checkNotNull(solrDestinationCollectionValidationService);
-        this.solrIndexingService = checkNotNull(createVectorCollectionService);
-        this.solrAdminActions =  checkNotNull(solrAdminActions);
+        this.solrIndexingService = checkNotNull(solrIndexingService);
+        this.solrAdminActions = checkNotNull(solrAdminActions);
+        this.solrInputDocumentQueue = checkNotNull(solrInputDocumentQueue);
+        this.indexingTracker = checkNotNull(indexingTracker);
         log.info("finished creating SemanticIndexer");
     }
-
 
     @Override
     public void runDefaultExportJob() {
@@ -66,7 +69,6 @@ public class SolrSemanticIndexer implements SemanticIndexer {
 
     @Override
     public void runExportJob(IndexerConfiguration indexerConfiguration) {
-
         String solr7Host = indexerConfiguration.getSourceSolrConfiguration().getConnection().getUrl();
         String solrSourceCollection = indexerConfiguration.getSourceSolrConfiguration().getCollection();
         String solrDestinationCollection = indexerConfiguration.getDestinationSolrConfiguration().getCollection();
@@ -75,12 +77,13 @@ public class SolrSemanticIndexer implements SemanticIndexer {
         // Validate the destination collection
         AtomicInteger pagesProcessed = new AtomicInteger(0);
         solrDestinationCollectionValidationService.validate();
-        //create the crawler ID.  This will be saved in the collection and documents
-        //that are not matching this crawler ID will be deleted
+
+        // Create the crawler ID. This will be saved in the collection and documents that are not matching this crawler ID will be deleted
         UUID crawlId = UUID.randomUUID();
 
         long totalExpected = httpSolrSelectClient.getTotalNumberOfDocumentsForCollection(solr7Host, solrSourceCollection);
         assert totalExpected >= 0;
+        indexingTracker.setTotalDocumentsFound(totalExpected);
         long numOfPagesExpected = calculateNumOfPages(totalExpected, paginationSize);
         assert numOfPagesExpected >= 0;
         List<CompletableFuture<Void>> futures = IntStream.range(0, (int) numOfPagesExpected)
@@ -96,9 +99,10 @@ public class SolrSemanticIndexer implements SemanticIndexer {
         } catch (InterruptedException | ExecutionException e) {
             throw new RuntimeException(e);
         }
-        log.info("*****PROCESSING COMPLETE.  {} pages processed.  {} documents exported to destination collection {}", pagesProcessed.get(), totalExpected, solrDestinationCollection);
+        log.info("*****PROCESSING COMPLETE. {} pages processed. {} documents exported to destination collection {}", pagesProcessed.get(), totalExpected, solrDestinationCollection);
         solrAdminActions.commit(solrDestinationCollection);
-        //TODO delete document that do not have the crawler ID
+        indexingTracker.finalizeTracking();
+        // TODO delete documents that do not have the crawler ID
     }
 
     public void processPages(String solr7Host, String solrSourceCollection, String solrDestinationCollection, Integer paginationSize, int currentPage, UUID crawlId, AtomicInteger pagesProcessed) {
@@ -114,10 +118,9 @@ public class SolrSemanticIndexer implements SemanticIndexer {
             return;
         }
         log.info("Exporting {} documents from source collection {} to destination collection {}", documents.size(), solrSourceCollection, solrDestinationCollection);
-        processDocuments(documents, crawlId);
+        processDocuments(documents, solrDestinationCollection, crawlId);
         pagesProcessed.incrementAndGet();
     }
-
 
     private long calculateNumOfPages(long totalDocuments, int paginationSize) {
         return (totalDocuments == -1) ? -1 : (totalDocuments / paginationSize) + 1;
@@ -131,11 +134,18 @@ public class SolrSemanticIndexer implements SemanticIndexer {
         return response.getNumFound() == 0;
     }
 
-    private void processDocuments(Collection<SolrInputDocument> documents, UUID crawlId) {
+    private void processDocuments(Collection<SolrInputDocument> documents, String solrDestinationCollection, UUID crawlId) {
         documents.parallelStream().forEach(doc -> {
             insertCreationDate(doc);
-            solrIndexingService.addVectorFieldsToSolr(doc, crawlId.toString(), Date.from(Instant.now()));
+            try {
+                solrIndexingService.addVectorFieldsToSolr(doc, crawlId.toString(), Date.from(Instant.now()));
+                solrInputDocumentQueue.addDocument(solrDestinationCollection, doc, SolrDocumentType.DOCUMENT);
+            } catch (Exception e) {
+                indexingTracker.documentFailed();
+                log.error("Failed to process document with ID: {}", doc.getFieldValue("id"), e);
+            }
         });
+        documents.forEach(doc -> indexingTracker.documentProcessed());
     }
 
     private static void insertCreationDate(SolrInputDocument doc) {
@@ -149,14 +159,12 @@ public class SolrSemanticIndexer implements SemanticIndexer {
                 log.warn("creation_date exists but was not a Long value {}", e.getMessage());
                 try {
                     Date creationDate = (Date) doc.getFieldValue("creation_date");
-                    doc.setField("creation_date", creationDate);
+                    doc.setField("creation_date", convertToSolrDateString(creationDate.getTime()));
                 } catch (Exception e2) {
-                    log.warn("creation_date exists but was not a Date value.  Giving up on conversion.  " +
-                            "Value {} with message {}", doc.getFieldValue("creation_date"), e.getMessage());
+                    log.warn("creation_date exists but was not a Date value. Giving up on conversion. Value {} with message {}", doc.getFieldValue("creation_date"), e.getMessage());
                 }
             }
         }
-;
     }
 
     private static final DateTimeFormatter solrDateFormat = DateTimeFormatter
@@ -167,6 +175,4 @@ public class SolrSemanticIndexer implements SemanticIndexer {
         Instant instant = Instant.ofEpochMilli(timestamp);
         return solrDateFormat.format(instant);
     }
-
-
 }

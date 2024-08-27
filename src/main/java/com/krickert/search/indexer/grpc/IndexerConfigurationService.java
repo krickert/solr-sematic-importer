@@ -14,17 +14,22 @@ public class IndexerConfigurationService extends IndexerConfigurationServiceImpl
 
     private final Map<String, IndexerConfiguration> configurations = new ConcurrentHashMap<>();
 
-    @Property(name = "indexer.default.vector-grpc-channel")
-    private String defaultVectorGrpcChannel;
+    private final String defaultVectorGrpcChannel;
 
-    @Property(name = "indexer.default.chunker-grpc-channel")
-    private String defaultChunkerGrpcChannel;
+    private final String defaultChunkerGrpcChannel;
 
-    @Property(name = "indexer.default.source-seed-data.enabled")
-    private boolean defaultSourceSeedDataEnabled;
+    private final boolean defaultSourceSeedDataEnabled;
 
-    @Property(name = "indexer.default.source-seed-data.seed-json-file")
-    private String defaultSeedJsonFile;
+    private final String defaultSeedJsonFile;
+
+    public IndexerConfigurationService(com.krickert.search.indexer.config.IndexerConfiguration indexerConfiguration) {
+        this.defaultVectorGrpcChannel = indexerConfiguration.getIndexerConfigurationProperties().getVectorGrpcChannel();
+        this.defaultChunkerGrpcChannel = indexerConfiguration.getIndexerConfigurationProperties().getChunkerGrpcChannel();
+        this.defaultSourceSeedDataEnabled =
+                indexerConfiguration.getIndexerConfigurationProperties().getSourceSeedData() != null
+                        && indexerConfiguration.getIndexerConfigurationProperties().getSourceSeedData().isEnabled();
+        this.defaultSeedJsonFile = indexerConfiguration.getIndexerConfigurationProperties().getSourceSeedData() != null ? indexerConfiguration.getIndexerConfigurationProperties().getSourceSeedData().getSeedJsonFile() : null;
+    }
 
     @Override
     public void getIndexerConfiguration(GetIndexerConfigurationRequest request, StreamObserver<IndexerConfiguration> responseObserver) {
