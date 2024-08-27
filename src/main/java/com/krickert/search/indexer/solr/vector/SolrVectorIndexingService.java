@@ -26,6 +26,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 public class SolrVectorIndexingService {
 
     private static final Logger log = LoggerFactory.getLogger(SolrVectorIndexingService.class);
+
     private final EmbeddingServiceGrpc.EmbeddingServiceBlockingStub embeddingServiceBlockingStub;
     private final ChunkServiceGrpc.ChunkServiceBlockingStub chunkServiceBlockingStub;
     private final IndexerConfiguration indexerConfiguration;
