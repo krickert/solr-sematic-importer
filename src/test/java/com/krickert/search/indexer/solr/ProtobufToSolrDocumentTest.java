@@ -55,7 +55,6 @@ public class ProtobufToSolrDocumentTest {
 
     @Inject
     ProtobufToSolrDocumentTest(ProtobufToSolrDocument unit,
-                               ResourceLoader resourceLoader,
                                ProtobufSolrIndexer protobufSolrIndexer,
                                IndexerConfiguration indexerConfiguration)
             throws SolrServerException, IOException {
@@ -82,7 +81,6 @@ public class ProtobufToSolrDocumentTest {
         List<SolrInputDocument> solrDocuments = pipeDocumentCollection.stream()
                 .map(unit::convertProtobufToSolrDocument)
                 .toList();
-        solrDocuments.forEach(System.out::println);
         assertEquals(pipeDocumentCollection.size(), solrDocuments.size());
     }
 

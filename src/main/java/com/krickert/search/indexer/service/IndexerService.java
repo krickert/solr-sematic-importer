@@ -1,11 +1,9 @@
 package com.krickert.search.indexer.service;
 
-import com.krickert.search.indexer.SolrSemanticIndexer;
 import com.krickert.search.indexer.config.IndexerConfiguration;
 import com.krickert.search.indexer.dto.IndexingStatus;
 import com.krickert.search.indexer.SemanticIndexer;
 import com.krickert.search.indexer.tracker.IndexingTracker;
-import io.micronaut.context.annotation.Requires;
 import io.micronaut.scheduling.annotation.Scheduled;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
@@ -18,7 +16,6 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
 @Singleton
-@Requires(beans = SolrSemanticIndexer.class)
 public class IndexerService {
 
     private final SemanticIndexer semanticIndexer;

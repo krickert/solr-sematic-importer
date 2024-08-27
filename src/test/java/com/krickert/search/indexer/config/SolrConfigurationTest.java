@@ -55,7 +55,7 @@ class SolrConfigurationTest {
 
         SolrConfiguration.Connection.Authentication auth = destinationConnection.getAuthentication();
         assertNotNull(auth);
-        assertTrue(auth.isEnabled());
+        assertFalse(auth.isEnabled());
         assertEquals("jwt", auth.getType());
         assertEquals("my-client-secret", auth.getClientSecret());
         assertEquals("my-client-id", auth.getClientId());

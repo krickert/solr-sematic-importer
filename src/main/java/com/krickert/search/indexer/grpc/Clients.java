@@ -10,8 +10,8 @@ import io.micronaut.context.annotation.Requires;
 import io.micronaut.context.env.Environment;
 import io.micronaut.grpc.annotation.GrpcChannel;
 
-@Requires(notEnv = Environment.TEST)
 @Factory
+@Requires(notEnv = Environment.TEST)
 public class Clients {
 
     @Bean

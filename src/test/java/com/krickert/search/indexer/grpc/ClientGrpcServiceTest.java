@@ -20,23 +20,18 @@ class ClientGrpcServiceTest {
     @Inject
     ApplicationContext context;
 
-    private PipeServiceGrpc.PipeServiceBlockingStub pipeServiceBlockingStub;
     private EmbeddingServiceGrpc.EmbeddingServiceBlockingStub embeddingServiceBlockingStub;
     private ChunkServiceGrpc.ChunkServiceBlockingStub chunkServiceBlockingStub;
 
     @BeforeEach
     void setup() {
-        this.pipeServiceBlockingStub = context.getBean(PipeServiceGrpc.PipeServiceBlockingStub.class);
         this.embeddingServiceBlockingStub = context.getBean(EmbeddingServiceGrpc.EmbeddingServiceBlockingStub.class);
         this.chunkServiceBlockingStub = context.getBean(ChunkServiceGrpc.ChunkServiceBlockingStub.class);
     }
 
     @Test
     void testVectorizerService() {
-        assertNotNull(pipeServiceBlockingStub, "PipeServiceBlockingStub should not be null");
         assertNotNull(embeddingServiceBlockingStub, "EmbeddingServiceBlockingStub should not be null");
-
-
     }
 
     @Test

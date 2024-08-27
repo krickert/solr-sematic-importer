@@ -2,12 +2,10 @@ package com.krickert.search.indexer.service;
 
 import com.krickert.search.service.ChunkServiceGrpc;
 import com.krickert.search.service.EmbeddingServiceGrpc;
-import com.krickert.search.service.HealthCheckReply;
 import com.krickert.search.service.HealthCheckRequest;
 import io.grpc.StatusRuntimeException;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
-import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -27,9 +25,7 @@ public class HealthService {
 
     public boolean checkVectorizerHealth() {
         try {
-            log.info("Calling ping on: {}", embeddingService.getChannel().toString());
-            HealthCheckReply reply = embeddingService.check(HealthCheckRequest.newBuilder().build());
-            return reply != null && reply.isInitialized();
+            return embeddingService.check(HealthCheckRequest.newBuilder().build()) != null;
         } catch (StatusRuntimeException e) {
             log.error("vector service not running. semantic indexing is going to be disabled.");
             return false;
@@ -38,11 +34,9 @@ public class HealthService {
 
     public boolean checkChunkerHealth() {
         try {
-            log.info("Calling ping on: {}", chunkService.getChannel().toString());
-            HealthCheckReply reply = chunkService.check(HealthCheckRequest.newBuilder().build());
-            return reply != null && reply.isInitialized();
+            return chunkService.check(HealthCheckRequest.newBuilder().build()) != null;
         } catch (StatusRuntimeException e) {
-            log.error("chunk service not running. semantic indexing is going to be disabled. {}", ExceptionUtils.getStackTrace(e));
+            log.error("vector service not running. semantic indexing is going to be disabled.");
             return false;
         }
     }

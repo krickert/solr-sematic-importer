@@ -64,7 +64,6 @@ public class SolrDestinationCollectionValidationService {
                     EmbeddingsVectorRequest.newBuilder().setText("Dummy").build()).getEmbeddingsCount();
             assert numberOfDimensions > 0;
             log.info("Finished initializing dimensionality");
-            embeddingsUp.set(true);
             return numberOfDimensions;
         } catch (Exception e) {
             log.error("Failed to initialize dimensionality due to: {}", e.getMessage(), e);
@@ -87,7 +86,7 @@ public class SolrDestinationCollectionValidationService {
 
     private void validateVectorCollections() {
         Map<String, VectorConfig> configs = indexerConfiguration.getVectorConfig();
-        // Partition the map into two maps based on getChunkField method
+
         Map<Boolean, Map<String, VectorConfig>> partitionedMaps = configs.entrySet()
                 .stream()
                 .collect(Collectors.partitioningBy(
@@ -95,11 +94,10 @@ public class SolrDestinationCollectionValidationService {
                         Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue)
                 ));
 
-        // Maps based on the value of getChunkField
-        Map<String, VectorConfig> inlineConfigs = partitionedMaps.get(false);  // Map with getChunkField() == false
+        Map<String, VectorConfig> inlineConfigs = partitionedMaps.get(false);
         inlineConfigs.forEach(this::validateInlineConfig);
 
-        Map<String, VectorConfig> chunkFieldTrue = partitionedMaps.get(true);  // Map with getChunkField() == true
+        Map<String, VectorConfig> chunkFieldTrue = partitionedMaps.get(true);
         chunkFieldTrue.forEach(this::validateChunkFieldConfig);
     }
 
@@ -156,7 +154,6 @@ public class SolrDestinationCollectionValidationService {
         } else {
             SolrConfiguration destinationSolrConfiguration = indexerConfiguration.getDestinationSolrConfiguration();
             String destinationCollection = destinationSolrConfiguration.getCollection();
-            //create the collection
             solrAdminActions.createCollection(destinationCollection, destinationSolrConfiguration.getCollectionCreation());
         }
     }

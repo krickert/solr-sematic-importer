@@ -1,8 +1,5 @@
 package com.krickert.search.indexer.grpc;
 
-import com.krickert.search.service.ChunkServiceGrpc;
-import com.krickert.search.service.EmbeddingServiceGrpc;
-import com.krickert.search.service.PipeServiceGrpc;
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
 import jakarta.inject.Inject;
 import org.junit.jupiter.api.Assertions;
@@ -12,20 +9,10 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 
 @MicronautTest
 @Testcontainers
-public class ClientIntegrationTest {
+public class GrpcContainerIntegrationTest {
 
     @Inject
     ClientGrpcTestContainers clientGrpcTestContainers;
-
-    @Inject
-    EmbeddingServiceGrpc.EmbeddingServiceBlockingStub embeddingServiceBlockingStub;
-
-    @Inject
-    ChunkServiceGrpc.ChunkServiceBlockingStub chunkServiceBlockingStub;
-
-    @Inject
-    PipeServiceGrpc.PipeServiceBlockingStub pipeServiceBlockingStub;
-
 
     @Test
     void test() {

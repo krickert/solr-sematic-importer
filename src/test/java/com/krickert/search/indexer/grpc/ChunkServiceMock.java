@@ -7,8 +7,12 @@ import io.micronaut.context.annotation.Factory;
 
 import java.lang.reflect.Method;
 import java.security.SecureRandom;
-import java.util.*;
-import java.util.regex.Pattern;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Random;
+import java.util.StringTokenizer;
 
 import static java.lang.reflect.Modifier.isPublic;
 import static org.mockito.Mockito.*;
@@ -20,9 +24,9 @@ public class ChunkServiceMock {
     private final Random random = new SecureRandom();
     private final List<Method> fakerMethods = new ArrayList<>();
     private final Map<Method, Object> methodCategoryMap = new HashMap<>();
-    private static final Pattern SYMBOL_PATTERN = Pattern.compile("[^a-zA-Z0-9\\s]");
 
     public ChunkServiceMock() {
+        // List of all Faker objects with their corresponding method names
         List<Object> fakerCategories = List.of(
                 faker.ancient(), faker.app(), faker.artist(), faker.avatar(), faker.aviation(), faker.lorem(),
                 faker.music(), faker.name(), faker.number(), faker.internet(), faker.phoneNumber(), faker.pokemon(),
@@ -41,6 +45,7 @@ public class ChunkServiceMock {
                 faker.programmingLanguage()
         );
 
+        // Collect all public methods that return a String and take no arguments, then map them to their respective categories
         for (Object category : fakerCategories) {
             for (Method method : category.getClass().getDeclaredMethods()) {
                 if (isPublic(method.getModifiers()) && method.getReturnType().equals(String.class) && method.getParameterCount() == 0) {
@@ -57,19 +62,14 @@ public class ChunkServiceMock {
 
         // Mock chunk method
         when(mockStub.chunk(any(ChunkRequest.class))).thenAnswer(invocation -> {
-            ChunkRequest request = invocation.getArgument(0);
-            int chunkLength = request.getOptions().getLength();
-            int overlap = request.getOptions().getOverlap();
-
-            List<String> chunks = new ArrayList<>();
             int numberOfChunks = random.nextInt(100) + 1;  // Random number from 1 to 100
-            // Generate a pool of random words sufficient for all chunks
-            List<String> wordsPool = generateWordsPool(chunkLength, overlap, numberOfChunks);
+            List<String> chunks = new ArrayList<>();
+            List<String> lastChunkWords = new ArrayList<>();
 
             for (int i = 0; i < numberOfChunks; i++) {
-                int startIndex = i * (chunkLength - overlap);
-                List<String> chunkWords = wordsPool.subList(startIndex, startIndex + chunkLength);
-                chunks.add(String.join(" ", chunkWords));
+                int numberOfWords = random.nextInt(3) + 10;  // Random number from 10 to 12
+                String chunk = generateRandomWords(numberOfWords, lastChunkWords);
+                chunks.add(chunk);
             }
 
             return ChunkReply.newBuilder().addAllChunks(chunks).build();
@@ -84,24 +84,41 @@ public class ChunkServiceMock {
         return mockStub;
     }
 
-    private List<String> generateWordsPool(int chunkLength, int overlap, int numberOfChunks) throws Exception {
-        int totalWordsNeeded = (chunkLength * numberOfChunks) - (overlap * (numberOfChunks - 1));
-        List<String> words = new ArrayList<>();
+    private String generateRandomWords(int numberOfWords, List<String> lastChunkWords) throws Exception {
+        StringBuilder words = new StringBuilder();
+        List<String> currentWords = new ArrayList<>();
 
-        while (words.size() < totalWordsNeeded) {
-            String wordGroup = generateRandomWords();
-            StringTokenizer tokenizer = new StringTokenizer(SYMBOL_PATTERN.matcher(wordGroup).replaceAll(""));
-            while (tokenizer.hasMoreTokens()) {
-                words.add(tokenizer.nextToken());
+        // Add up to the last 3 words from the previous chunk
+        if (!lastChunkWords.isEmpty()) {
+            for (int i = 0; i < Math.min(3, lastChunkWords.size()); i++) {
+                if (words.length() > 0) words.append(" ");
+                words.append(lastChunkWords.get(i));
+                currentWords.add(lastChunkWords.get(i));
             }
         }
 
-        return words;
-    }
+        int wordCount = currentWords.size();
+        while (wordCount < numberOfWords) {
+            Method method = fakerMethods.get(random.nextInt(fakerMethods.size()));
+            Object category = methodCategoryMap.get(method);
+            String output = (String) method.invoke(category);
 
-    private String generateRandomWords() throws Exception {
-        Method method = fakerMethods.get(random.nextInt(fakerMethods.size()));
-        Object category = methodCategoryMap.get(method);
-        return (String) method.invoke(category);
+            // Tokenize the output into words
+            StringTokenizer tokenizer = new StringTokenizer(output);
+            while (tokenizer.hasMoreTokens() && wordCount < numberOfWords) {
+                if (words.length() > 0) words.append(" ");
+                words.append(tokenizer.nextToken());
+                wordCount++;
+            }
+        }
+
+        // Save the last 3 words for the next chunk
+        lastChunkWords.clear();
+        String[] splittedWords = words.toString().split(" ");
+        for (int i = Math.max(0, splittedWords.length - 3); i < splittedWords.length; i++) {
+            lastChunkWords.add(splittedWords[i]);
+        }
+
+        return words.toString();
     }
 }

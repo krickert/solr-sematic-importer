@@ -4,6 +4,7 @@ import com.google.common.collect.Sets;
 import com.krickert.search.indexer.config.SolrConfiguration;
 import com.krickert.search.indexer.config.VectorConfig;
 import io.micronaut.core.io.ResourceLoader;
+import io.micronaut.core.util.StringUtils;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
@@ -18,6 +19,7 @@ import org.apache.solr.client.solrj.request.schema.SchemaRequest;
 import org.apache.solr.client.solrj.response.*;
 import org.apache.solr.client.solrj.response.schema.FieldTypeRepresentation;
 import org.apache.solr.client.solrj.response.schema.SchemaResponse;
+import org.apache.solr.common.SolrInputField;
 import org.apache.solr.common.params.ModifiableSolrParams;
 import org.apache.solr.common.util.NamedList;
 import org.slf4j.Logger;
@@ -239,17 +241,17 @@ public class SolrAdminActions {
         }
     }
 
-    public void validateVectorField(
+    public String validateVectorField(
             String vectorFieldName,
             String similarityFunction,
             Integer hnswMaxConnections,
             Integer hnswBeamWidth,
             Integer dimensionality,
             String collection) throws IOException, SolrServerException {
+        String fieldNameCreated = vectorFieldName;
         // Check if the field type exists
-
         //inline fields have a matching type with an underscore
-        String vectorFieldType = vectorFieldName + "_" + dimensionality;
+        String vectorFieldType = fieldNameCreated + "_" + dimensionality;
 
         //looking in the collection to see if it's been created
         FieldTypeRepresentation fieldTypeRepresentation = getFieldTypeByName(vectorFieldType, collection);
@@ -267,16 +269,42 @@ public class SolrAdminActions {
                     hnswMaxConnections,
                     hnswBeamWidth,
                     collection);
+            fieldTypeRepresentation = getFieldTypeByName(vectorFieldType, collection);
+            if (fieldTypeRepresentation == null) {
+                throw new IllegalStateException("Field type " + vectorFieldType + " was not created.");
+            }
+            validateFieldTypeAttributes(similarityFunction, hnswMaxConnections, hnswBeamWidth, dimensionality, fieldTypeRepresentation, vectorFieldType);
         }
         // Check if the field exists
-        boolean fieldExists = checkFieldExists(vectorFieldName, collection);
+        try {
+            boolean fieldExists = checkFieldExists(fieldNameCreated, collection, dimensionality, similarityFunction);
+            if (!fieldExists) {
+                // Create the field
+                createDenseVectorField(fieldNameCreated, vectorFieldType, collection);
+            } else {
+                log.info("Field {} exists.  No need to create it.", fieldNameCreated);
+            }
+        } catch (IOException | SolrServerException e) {
+            throw new RuntimeException(e);
+        } catch (FieldCreationExistsAttributeMismatchException fieldCreationExistsAttributeMismatchException) {
+            //let's give it a second try
+            if (StringUtils.isEmpty(similarityFunction)) {
+                similarityFunction = "cosine";
 
-        if (!fieldExists) {
-            // Create the field
-            createDenseVectorField(vectorFieldName, vectorFieldType, collection);
-        } else {
-            log.info("Field {} exists.  No need to create it.", vectorFieldName);
+                log.info(String.format("There was an exception while trying to create the default field and field type.  We are going to try again with a similarity function of %s", similarityFunction));
+                createDenseVectorFieldType(
+                        vectorFieldType,
+                        dimensionality,
+                        similarityFunction,
+                        hnswMaxConnections,
+                        hnswBeamWidth,
+                        collection);
+            }
+            fieldNameCreated = vectorFieldName + "_" + similarityFunction + "_" + dimensionality;
+            createDenseVectorField(fieldNameCreated, vectorFieldType, collection);
         }
+
+        return fieldNameCreated;
     }
 
     private void validateFieldTypeAttributes(String similarityFunction, Integer hnswMaxConnections, Integer hnswBeamWidth, Integer dimensionality, FieldTypeRepresentation fieldTypeRepresentation, String vectorFieldType) {
@@ -330,38 +358,70 @@ public class SolrAdminActions {
         return null;
     }
 
-    private boolean checkFieldTypeExists(Integer dimensionality, String collectionName) throws IOException, SolrServerException {
-        SchemaRequest.FieldTypes fieldTypesRequest = new SchemaRequest.FieldTypes();
-        SchemaResponse.FieldTypesResponse fieldTypesResponse = fieldTypesRequest.process(solrClient, collectionName);
-        List<FieldTypeRepresentation> fieldTypes = fieldTypesResponse.getFieldTypes();
-        for (FieldTypeRepresentation fieldTypeInfo : fieldTypes) {
+    // Function to get FieldTypeRepresentation based on field name
+    public FieldTypeRepresentation getFieldTypeInfo(String fieldTypeName, String collectionName) throws IOException, SolrServerException {
+        // Request to get the field definitions from the schema
+        SchemaRequest.FieldTypes fieldsRequest = new SchemaRequest.FieldTypes();
+        SchemaResponse.FieldTypesResponse fieldTypesResponse = fieldsRequest.process(solrClient, collectionName);
+        for (FieldTypeRepresentation fieldTypeInfo : fieldTypesResponse.getFieldTypes()) {
             Map<String, Object> attributes = fieldTypeInfo.getAttributes();
-
-            Object classAttribute = attributes.get("class");
-            Object vectorDimensionAttribute = attributes.get("vectorDimension");
-
-            // check if 'class' equals "solr.DenseVectorField" and 'vectorDimension' equals the provided dimensionality
-            if ("solr.DenseVectorField".equals(classAttribute) &&
-                    (vectorDimensionAttribute != null &&
-                            (vectorDimensionAttribute.equals(dimensionality)
-                            || vectorDimensionAttribute.equals(dimensionality.toString())))) {
-                return true;
+            String name = (String) attributes.get("name");
+            if (fieldTypeName.equals(name)) {
+                return fieldTypeInfo;
             }
         }
-        return false;
+
+        return null; // Return null if field name or field type is not found
     }
 
-    private boolean checkFieldExists(String fieldName, String collectionName) throws IOException, SolrServerException {
+
+    private boolean checkFieldExists(String fieldName, String collectionName, Integer targetDimensionaltiy, String targetSimilarityFunction) throws IOException, SolrServerException {
         SchemaRequest.Fields fieldsRequest = new SchemaRequest.Fields();
         SchemaResponse.FieldsResponse fieldsResponse = fieldsRequest.process(solrClient, collectionName);
         List<Map<String, Object>> fields = fieldsResponse.getFields();
         for (Map<String, Object> fieldInfo : fields) {
             if (fieldName.equals(fieldInfo.get("name").toString())) {
+                String fieldTypeName = (String) fieldInfo.get("type");
+                FieldTypeRepresentation fieldTypeInfo = getFieldTypeInfo(fieldTypeName, collectionName);
+                String dimensionality = (String) fieldTypeInfo.getAttributes().get("vectorDimension");
+                String similarityFunction = (String) fieldTypeInfo.getAttributes().get("similarityFunction");
+                boolean throwException = false;
+                StringBuilder exceptionMessage = new StringBuilder();
+                if (targetDimensionaltiy != null && !dimensionality.equals(targetDimensionaltiy.toString())) {
+                    throwException = true;
+                    log.error("Source and target field dimensionality do not match for field configuration in solr.  Please check the configuration.  One attempt will be made to make a correction and guess a new field name.");
+                    String errorMessage = String.format("The source dimensionality [%s] and target [%s] field dimensionality for the field [%s] do not match for field configuration in solr [%s].  Please check the configuration.\n", dimensionality, targetDimensionaltiy, fieldName, collectionName);
+                    exceptionMessage.append(errorMessage);
+                } else if (dimensionality == null) {
+                    throwException = true;
+                    exceptionMessage.append(String.format("Collection [%S] has Field in solr [%s] has no dimensionality [%s] but the current vectorizer has dimensionality of [%s].  Will attempt one try to make a new one but it will not match what is in the config.  Please check the configuration.\n",
+                            collectionName, fieldName, fieldTypeInfo, targetDimensionaltiy));
+                }
+                if (targetSimilarityFunction != null && !similarityFunction.equals(targetSimilarityFunction)) {
+                    throwException = true;
+                    log.error("Source and target field similarity function do not match for field configuration in solr.  Please check the configuration.  One attempt will be made to make a correction and guess a new field name.");
+                    String errorMessage = String.format("The source similarity function [%s] and target [%s] field similarity function for the field [%s] do not match for field configuration in solr [%s].  Please check the configuration.\n", similarityFunction, targetSimilarityFunction, fieldName, collectionName);
+                    exceptionMessage.append(errorMessage);
+                } else if (similarityFunction == null) {
+                    throwException = true;
+                    exceptionMessage.append(String.format("Collection [%S] has Field in solr [%s] has no similarity function [%s].  " +
+                            "To prevent you from having a wrong similarity function, we will create a new one with the correct similarity function [%s].\n",
+                                    "Will attempt one try to make a new one but it will not match what is in the config.  Please check the configuration.\n",
+                            collectionName, fieldName, fieldTypeInfo, targetSimilarityFunction));
+                }
+                if (throwException) {
+                    throw new FieldCreationExistsAttributeMismatchException(exceptionMessage.toString());
+                }
                 return true;
             }
         }
         return false;
     }
+
+    private static String getNewFieldNameFromException(String fieldName, String dimensionality, String similarityFunction) {
+        return fieldName + "_" + dimensionality + "_" + similarityFunction;
+    }
+
 
     private void createDenseVectorFieldType(
             String fieldType,
