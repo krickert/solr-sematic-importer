@@ -3,6 +3,8 @@ package com.krickert.search.indexer.grpc;
 import com.krickert.search.service.*;
 import io.micronaut.context.annotation.Bean;
 import io.micronaut.context.annotation.Factory;
+import io.micronaut.context.annotation.Requires;
+import io.micronaut.context.env.Environment;
 
 import static org.mockito.Mockito.*;
 
@@ -12,6 +14,7 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 @Factory
+@Requires(env = Environment.TEST)
 public class EmbeddingServiceMock {
 
     @Bean

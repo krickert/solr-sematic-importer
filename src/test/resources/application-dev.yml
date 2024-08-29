@@ -50,15 +50,15 @@ solr-config:
       number_of_shards: 1
       number_of_replicas: 2
     connection:
-      url: http://rokkon.com:8983/solr
+      url: http://localhost:8983/solr
       queue-size: 300 #size of each of the blocking queues  queue-size * thread-count = total document queue before blocking
       thread-count: 3 #number of threads to create for the indexing client queue
       authentication:
         enabled: true
         type: jwt
-        client-secret: "gCc8ABmPoHLGCdyiPMbqdPgQnj-yzNN2pJvzXR1rVsWpUQ8cgbZJDKZk-m07Xy2m"
+        client-secret: secret-client
         client-id: "0oaj7tu2ehuix5y6j5d7"
-        issuer: https://dev-28615306.okta.com/oauth2/default/v1/token
+        issuer: https://blah.okta.com/oauth2/default/v1/token
         issuerAuthId: issuer-auth-id
         subject: your-subject
 

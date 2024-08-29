@@ -63,7 +63,7 @@ public class IndexerConfigurationTest {
         assertNotNull(destConnection);
         testConnectionString(destConnection);
         assertNotNull(destConnection.getQueueSize());
-        assertEquals(300, destConnection.getQueueSize());
+        assertEquals(2000, destConnection.getQueueSize());
         assertNotNull(destConnection.getThreadCount());
         assertEquals(3, destConnection.getThreadCount());
         assertNotNull(destConnection.getAuthentication());

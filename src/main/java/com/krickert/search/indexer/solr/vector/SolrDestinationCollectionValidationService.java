@@ -1,10 +1,12 @@
 package com.krickert.search.indexer.solr.vector;
 
+import com.google.common.base.MoreObjects;
 import com.krickert.search.indexer.config.IndexerConfiguration;
 import com.krickert.search.indexer.config.SolrConfiguration;
 import com.krickert.search.indexer.config.VectorConfig;
 import com.krickert.search.indexer.service.HealthService;
 import com.krickert.search.indexer.solr.client.SolrAdminActions;
+import com.krickert.search.indexer.solr.client.VectorFieldValidator;
 import com.krickert.search.service.EmbeddingServiceGrpc;
 import com.krickert.search.service.EmbeddingsVectorRequest;
 import io.micronaut.core.util.StringUtils;
@@ -32,9 +34,10 @@ public class SolrDestinationCollectionValidationService {
     private final Integer dimensionality;
     private final HealthService healthService;
     private final AtomicBoolean embeddingsUp = new AtomicBoolean(false);
+    private final VectorFieldValidator vectorFieldValidator;
 
 
-    @Scheduled(fixedRate = "20s")
+    @Scheduled(fixedRate = "20s", initialDelay = "200s")
     public void checkEmbeddingsUp() {
         if (healthService.checkVectorizerHealth()) {
             if (dimensionality == null || dimensionality < 1) {
@@ -49,12 +52,13 @@ public class SolrDestinationCollectionValidationService {
     }
 
     @Inject
-    public SolrDestinationCollectionValidationService(IndexerConfiguration indexerConfiguration, SolrAdminActions solrAdminActions, EmbeddingServiceGrpc.EmbeddingServiceBlockingStub embeddingServiceBlockingStub, HealthService healthService) {
+    public SolrDestinationCollectionValidationService(IndexerConfiguration indexerConfiguration, SolrAdminActions solrAdminActions, EmbeddingServiceGrpc.EmbeddingServiceBlockingStub embeddingServiceBlockingStub, HealthService healthService, VectorFieldValidator vectorFieldValidator) {
         this.indexerConfiguration = indexerConfiguration;
         this.solrAdminActions = solrAdminActions;
         this.embeddingServiceBlockingStub = embeddingServiceBlockingStub;
         this.healthService = checkNotNull(healthService);
         this.dimensionality = initializeDimensionality();
+        this.vectorFieldValidator = vectorFieldValidator;
     }
 
     private Integer initializeDimensionality() {
@@ -97,19 +101,26 @@ public class SolrDestinationCollectionValidationService {
         Map<String, VectorConfig> inlineConfigs = partitionedMaps.get(false);
         inlineConfigs.forEach(this::validateInlineConfig);
 
-        Map<String, VectorConfig> chunkFieldTrue = partitionedMaps.get(true);
-        chunkFieldTrue.forEach(this::validateChunkFieldConfig);
+        Map<String, VectorConfig> fieldsToChunk = partitionedMaps.get(true);
+        fieldsToChunk.forEach(this::validateChunkFieldConfig);
     }
 
-    private void validateInlineConfig(String fieldName, VectorConfig vectorConfig) {
+    private ValidateVectorFieldResponse validateInlineConfig(String fieldName, VectorConfig vectorConfig) {
         String destinationCollection = indexerConfiguration.getDestinationSolrConfiguration().getCollection();
 
         String vectorFieldName = vectorConfig.getChunkFieldVectorName();
         if (StringUtils.isEmpty(vectorFieldName)) {
             vectorFieldName = fieldName + "-vector";
         }
-
-        validateVectorField(vectorFieldName, vectorConfig, destinationCollection);
+        ValidateVectorFieldResponse response = validateVectorField(vectorFieldName, vectorConfig, destinationCollection);
+        if (response.fieldChanged()) {
+            //change the name of the field in the vector config
+            vectorConfig.setChunkFieldVectorName(response.fieldCreated());
+            vectorConfig.setChunkFieldNameRequested(response.fieldRequested());
+            log.info("NOTE!  FILED RQUEST IS NOT THE FIELD WE WILL USE {}", vectorConfig);
+        }
+        log.info("Vector field validated {}", response);
+        return response;
     }
 
     private void validateChunkFieldConfig(String fieldName, VectorConfig vectorConfig) {
@@ -131,20 +142,44 @@ public class SolrDestinationCollectionValidationService {
             vectorFieldName = fieldName + "-vector";
         }
 
-        validateVectorField(vectorFieldName, vectorConfig, destinationCollection);
+        ValidateVectorFieldResponse response = validateVectorField(vectorFieldName, vectorConfig, destinationCollection);
+        if (response.fieldChanged()) {
+            vectorConfig.setChunkFieldVectorName(response.fieldCreated());
+            vectorConfig.setChunkFieldNameRequested(response.fieldRequested());
+            log.info("NOTE!  FILED RQUEST IS NOT THE FIELD WE WILL USE {}", vectorConfig);
+        }
     }
 
-    private void validateVectorField(String vectorFieldName, VectorConfig vectorConfig, String destinationCollection) {
+    private ValidateVectorFieldResponse validateVectorField(String vectorFieldName, VectorConfig vectorConfig, String destinationCollection) {
         try {
-            solrAdminActions.validateVectorField(
+            String fieldCreated = vectorFieldValidator.validateVectorField(
                     vectorFieldName,
                     vectorConfig.getSimilarityFunction(),
                     vectorConfig.getHnswMaxConnections(),
                     vectorConfig.getHnswBeamWidth(),
                     dimensionality,
                     destinationCollection);
+            return new ValidateVectorFieldResponse(fieldCreated, vectorFieldName, true, new ValidateVectorFieldRequest(vectorFieldName, vectorConfig, destinationCollection), dimensionality);
         } catch (IOException | SolrServerException e) {
             throw new RuntimeException(e);
+        }
+    }
+
+    protected record ValidateVectorFieldRequest(String vectorFieldName, VectorConfig vectorConfig, String destinationCollection){
+        @Override
+        public String toString() {
+            return MoreObjects.toStringHelper(this)
+                    .add("vectorFieldName", vectorFieldName)
+                    .add("vectorConfig", vectorConfig)
+                    .add("destinationCollection", destinationCollection)
+                    .toString();
+        }
+    }
+
+    protected record ValidateVectorFieldResponse(String fieldCreated,String fieldRequested, boolean fieldCreatedSuccessfully, ValidateVectorFieldRequest request, Integer dimensionality) {
+
+        public boolean fieldChanged() {
+            return !fieldRequested.equals(fieldCreated);
         }
     }
 

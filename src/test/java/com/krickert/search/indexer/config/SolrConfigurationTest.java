@@ -50,7 +50,7 @@ class SolrConfigurationTest {
         SolrConfiguration.Connection destinationConnection = destination.getConnection();
         assertNotNull(destinationConnection);
         testConnectionString(destinationConnection);
-        assertEquals(300, destinationConnection.getQueueSize());
+        assertEquals(2000, destinationConnection.getQueueSize());
         assertEquals(3, destinationConnection.getThreadCount());
 
         SolrConfiguration.Connection.Authentication auth = destinationConnection.getAuthentication();

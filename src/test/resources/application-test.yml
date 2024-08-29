@@ -35,10 +35,10 @@ solr-config:
     version: 7.7.3
     collection: source_collection
     connection:
-      url: http://localhost:${solr7-test-port}/solr
+      url: http://localhost:8983/solr
       authentication:
         enabled: false
-      pagination-size: 10
+      pagination-size: 100
   destination:
     version: 9.6.1
     collection: destination_collection
@@ -48,8 +48,8 @@ solr-config:
       number_of_shards: 1
       number_of_replicas: 2
     connection:
-      url: http://localhost:${solr9-test-port}/solr
-      queue-size: 300 #size of each of the blocking queues  queue-size * thread-count = total document queue before blocking
+      url: http://localhost:8983/solr
+      queue-size: 2000 #size of each of the blocking queues  queue-size * thread-count = total document queue before blocking
       thread-count: 3 #number of threads to create for the indexing client queue
       authentication:
         enabled: false

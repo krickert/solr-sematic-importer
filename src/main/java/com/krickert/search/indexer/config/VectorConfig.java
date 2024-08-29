@@ -14,34 +14,37 @@ import io.micronaut.serde.annotation.Serdeable;
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class VectorConfig {
 
-    @JsonProperty("chunkOverlap")
+    @JsonProperty("chunk-overlap")
     private Integer chunkOverlap;
 
     @JsonProperty("chunkSize")
     private Integer chunkSize;
 
-    @JsonProperty("chunkField")
+    @JsonProperty("chunk-field")
     private Boolean chunkField;
 
     @JsonProperty("model")
     private String model;
 
-    @JsonProperty("destinationCollection")
+    @JsonProperty("destination-collection")
     private String destinationCollection;
 
-    @JsonProperty("chunkFieldVectorName")
+    @JsonProperty("chunk-field-vector-name")
     private String chunkFieldVectorName;
 
-    @JsonProperty("similarityFunction")
+    @JsonProperty("chunk-field-name-requested")
+    private String chunkFieldNameRequested;
+
+    @JsonProperty("similarity-function")
     private String similarityFunction;
 
-    @JsonProperty("hnswMaxConnections")
+    @JsonProperty("hnsw-max-connections")
     private Integer hnswMaxConnections;
 
-    @JsonProperty("hnswBeamWidth")
+    @JsonProperty("hnsw-beam-width")
     private Integer hnswBeamWidth;
 
-    @JsonProperty("collectionCreation")
+    @JsonProperty("collection-creation")
     private VectorCollectionCreationConfig collectionCreation;
 
     public Integer getChunkOverlap() {
@@ -92,6 +95,14 @@ public class VectorConfig {
         this.chunkFieldVectorName = chunkFieldVectorName;
     }
 
+    public String getChunkFieldNameRequested() {
+        return chunkFieldNameRequested;
+    }
+
+    public void setChunkFieldNameRequested(String chunkFieldNameRequested) {
+        this.chunkFieldNameRequested = chunkFieldNameRequested;
+    }
+
     public String getSimilarityFunction() {
         return similarityFunction;
     }
@@ -133,6 +144,7 @@ public class VectorConfig {
                 .add("model", model)
                 .add("destinationCollection", destinationCollection)
                 .add("chunkFieldVectorName", chunkFieldVectorName)
+                .add("chunkFieldNameRequested", chunkFieldNameRequested)
                 .add("similarityFunction", similarityFunction)
                 .add("hnswMaxConnections", hnswMaxConnections)
                 .add("hnswBeamWidth", hnswBeamWidth)

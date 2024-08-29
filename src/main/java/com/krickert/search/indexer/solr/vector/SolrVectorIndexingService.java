@@ -116,7 +116,7 @@ public class SolrVectorIndexingService {
             return;
         }
 
-        String vectorFieldName = fieldName + "_vector";
+        String vectorFieldName = indexerConfiguration.getVectorConfig().get(fieldName).getChunkFieldVectorName();
         EmbeddingsVectorReply embeddingsVectorReply = getEmbeddingsVectorReply(fieldData);
         solrInputDocument.addField(vectorFieldName, embeddingsVectorReply.getEmbeddingsList());
     }

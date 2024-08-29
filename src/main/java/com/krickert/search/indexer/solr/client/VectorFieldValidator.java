@@ -125,35 +125,45 @@ public class VectorFieldValidator {
         SchemaRequest.Fields fieldsRequest = new SchemaRequest.Fields();
         SchemaResponse.FieldsResponse fieldsResponse = fieldsRequest.process(solrClient, collectionName);
         List<Map<String, Object>> fields = fieldsResponse.getFields();
-        for (Map<String, Object> fieldInfo : fields) {
-            if (fieldName.equals(fieldInfo.get("name"))) {
-                String fieldTypeName = (String) fieldInfo.get("type");
-                FieldTypeRepresentation fieldTypeInfo = getFieldTypeByName(fieldTypeName, collectionName);
-                String dimensionality = (String) fieldTypeInfo.getAttributes().get("vectorDimension");
-                String similarityFunction = (String) fieldTypeInfo.getAttributes().get("similarityFunction");
-                boolean throwException = false;
-                StringBuilder exceptionMessage = new StringBuilder();
-                if (targetDimensionality != null && !dimensionality.equals(targetDimensionality.toString())) {
-                    throwException = true;
-                    exceptionMessage.append(String.format("Collection [%s] has Field [%s] with mismatched dimensionality [%s vs %s].", collectionName, fieldName, targetDimensionality, dimensionality));
-                } else if (dimensionality == null) {
-                    throwException = true;
-                    exceptionMessage.append(String.format("Field in collection [%s] has no dimensionality [%s vs %s].", collectionName, fieldName, targetDimensionality));
-                }
-                if (targetSimilarityFunction != null && !similarityFunction.equals(targetSimilarityFunction)) {
-                    throwException = true;
-                    exceptionMessage.append(String.format("Collection [%s] has Field [%s] with mismatched similarity function [%s vs %s].", collectionName, fieldName, targetSimilarityFunction, similarityFunction));
-                } else if (similarityFunction == null) {
-                    throwException = true;
-                    exceptionMessage.append(String.format("Field in collection [%s] has no similarity function [%s vs %s].", collectionName, fieldName, targetSimilarityFunction));
-                }
-                if (throwException) {
-                    throw new FieldCreationExistsAttributeMismatchException(exceptionMessage.toString());
-                }
-                return true;
-            }
+
+        Map<String, Object> matchingFieldInfo = fields.stream()
+                .filter(fieldInfo -> fieldName.equals(fieldInfo.get("name")))
+                .findFirst()
+                .orElse(null);
+
+        if (matchingFieldInfo == null) {
+            log.info("Field [{}] does not exist in the collection [{}] schema", fieldName, collectionName);
+            return false;
         }
-        return false;
+        String fieldTypeName = (String) matchingFieldInfo.get("type");
+        FieldTypeRepresentation fieldTypeInfo = getFieldTypeByName(fieldTypeName, collectionName);
+        String dimensionality = (String) fieldTypeInfo.getAttributes().get("vectorDimension");
+        String similarityFunction = (String) fieldTypeInfo.getAttributes().get("similarityFunction");
+
+        boolean throwException = false;
+        StringBuilder exceptionMessage = new StringBuilder();
+
+        if (targetDimensionality != null && !dimensionality.equals(targetDimensionality.toString())) {
+            throwException = true;
+            exceptionMessage.append(String.format("Collection [%s] has Field [%s] with mismatched dimensionality [%s vs %s]. ", collectionName, fieldName, targetDimensionality, dimensionality));
+        } else if (dimensionality == null) {
+            throwException = true;
+            exceptionMessage.append(String.format("Field in collection [%s] has no dimensionality. Expected: [%s].", collectionName, targetDimensionality));
+        }
+
+        if (targetSimilarityFunction != null && !similarityFunction.equals(targetSimilarityFunction)) {
+            throwException = true;
+            exceptionMessage.append(String.format("Collection [%s] has Field [%s] with mismatched similarity function [%s vs %s]. ", collectionName, fieldName, targetSimilarityFunction, similarityFunction));
+        } else if (similarityFunction == null) {
+            throwException = true;
+            exceptionMessage.append(String.format("Field in collection [%s] has no similarity function. Expected: [%s].", collectionName, targetSimilarityFunction));
+        }
+
+        if (throwException) {
+            throw new FieldCreationExistsAttributeMismatchException(exceptionMessage.toString());
+        }
+
+        return true;
     }
 
     private void createDenseVectorFieldType(

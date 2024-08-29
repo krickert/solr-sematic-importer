@@ -47,7 +47,7 @@ public class SolrInputDocumentQueue {
     public void addDocuments(String collection, List<SolrInputDocument> documents, SolrDocumentType type) {
         try {
             solrClient.add(collection, documents);
-            documents.forEach(doc -> indexingTracker.documentProcessed());
+            documents.forEach(doc -> indexingTracker.chunkProcessed());
         } catch (SolrServerException | IOException e) {
             documents.forEach(doc -> indexingTracker.documentFailed());
             List<String> docIds = documents.stream().map(doc -> doc.getFieldValue("id").toString()).collect(Collectors.toList());

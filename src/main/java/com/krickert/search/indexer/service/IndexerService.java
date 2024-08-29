@@ -89,7 +89,7 @@ public class IndexerService {
         return IndexingStatus.OverallStatus.RUNNING.equals(currentStatus.getOverallStatus());
     }
 
-    @Scheduled(fixedRate = "1s")
+    @Scheduled(fixedRate = "1s", initialDelay = "10s")
     public void updateProgress() {
         indexingTracker.updateProgress();
     }
