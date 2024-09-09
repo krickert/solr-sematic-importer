@@ -23,7 +23,7 @@ public class JsonToSolrDocTest {
     public void testParseSolrDocuments() {
         // Arrange
         JsonToSolrDocParser jsonToSolrDoc = new JsonToSolrDocParser();
-        String jsonString =  "{" +
+        String jsonString = "{" +
                 "  \"responseHeader\":{\n" +
                 "    \"status\":0,\n" +
                 "    \"QTime\":1,\n" +
@@ -74,6 +74,7 @@ public class JsonToSolrDocTest {
             assertFalse(doc.containsKey("_version_"));
         });
     }
+
     /**
      * Test checks if the parseSolrDocuments method throws an exception when it tries to parse an invalid JSON string.
      */

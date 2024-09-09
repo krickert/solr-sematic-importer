@@ -20,7 +20,6 @@ import static com.google.common.base.Preconditions.checkNotNull;
 
 /**
  * Service that takes in the indexing configuration and determines if the collections for creating vectors
- *
  */
 @Singleton
 public class SolrVectorIndexingService {
@@ -95,7 +94,7 @@ public class SolrVectorIndexingService {
                         chunkerReply.getChunksList().stream().toList(),
                         origDocId, crawlId, dateCreated,
                         indexerConfiguration.getDestinationSolrConfiguration().getCollection(),
-                        vectorConfig.getChunkFieldVectorName(),solrDestinationCollectionValidationService.getDimensionality()),
+                        vectorConfig.getChunkFieldVectorName(), solrDestinationCollectionValidationService.getDimensionality()),
                 SolrDocumentType.VECTOR);
     }
 
@@ -122,14 +121,14 @@ public class SolrVectorIndexingService {
     }
 
     private List<SolrInputDocument> createChunkDocuments(String fieldName,
-                                              List<EmbeddingsVectorReply> embeddingsList,
-                                              List<String> chunksList,
-                                              String origDocId,
-                                              String crawlId,
-                                              Date dateCreated,
-                                              String parentCollection,
-                                              String chunkVectorFieldName,
-                                              Integer dimensionality) {
+                                                         List<EmbeddingsVectorReply> embeddingsList,
+                                                         List<String> chunksList,
+                                                         String origDocId,
+                                                         String crawlId,
+                                                         Date dateCreated,
+                                                         String parentCollection,
+                                                         String chunkVectorFieldName,
+                                                         Integer dimensionality) {
         List<SolrInputDocument> chunkDocuments = new ArrayList<>(chunksList.size());
 
         for (int i = 0; i < chunksList.size(); i++) {
@@ -137,7 +136,7 @@ public class SolrVectorIndexingService {
             EmbeddingsVectorReply embedding = embeddingsList.get(i);
             Collection<Float> vector = embedding.getEmbeddingsList();
             // Define the docId with left-padded sequence number
-            String docId = origDocId + "#" + StringUtils.leftPad(""+i, 7, "0");
+            String docId = origDocId + "#" + StringUtils.leftPad("" + i, 7, "0");
             SolrInputDocument docToAdd = createSolrInputDocument(
                     docId,
                     origDocId, // Assuming parentId is the original document ID
@@ -181,15 +180,14 @@ public class SolrVectorIndexingService {
             String crawlId,
             Date dateCreated,
             String parentCollection,
-            String vectorFieldName)
-    {
+            String vectorFieldName) {
 
         SolrInputDocument document = new SolrInputDocument();
         document.addField("id", docId);
         document.addField("parentId", parentId);
         document.addField("chunk", chunk);
         document.addField("chunkNumber", chunkNumber);
-        document.addField(vectorFieldName , vector);
+        document.addField(vectorFieldName, vector);
         document.addField("parentFieldName", parentFieldName);
         document.addField("crawlId", crawlId);
         document.addField("dateCreated", dateCreated);

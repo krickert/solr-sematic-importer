@@ -1,25 +1,19 @@
 package com.krickert.search.indexer.solr.client;
 
-import com.google.common.collect.Sets;
 import com.krickert.search.indexer.config.SolrConfiguration;
 import com.krickert.search.indexer.config.VectorConfig;
 import io.micronaut.core.io.ResourceLoader;
-import io.micronaut.core.util.StringUtils;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import org.apache.solr.client.solrj.SolrClient;
+import org.apache.solr.client.solrj.SolrQuery;
 import org.apache.solr.client.solrj.SolrServerException;
 import org.apache.solr.client.solrj.impl.BaseHttpSolrClient;
 import org.apache.solr.client.solrj.request.CollectionAdminRequest;
 import org.apache.solr.client.solrj.request.ConfigSetAdminRequest;
 import org.apache.solr.client.solrj.request.GenericSolrRequest;
-import org.apache.solr.client.solrj.request.schema.FieldTypeDefinition;
-import org.apache.solr.client.solrj.request.schema.SchemaRequest;
 import org.apache.solr.client.solrj.response.*;
-import org.apache.solr.client.solrj.response.schema.FieldTypeRepresentation;
-import org.apache.solr.client.solrj.response.schema.SchemaResponse;
-import org.apache.solr.common.SolrInputField;
 import org.apache.solr.common.params.ModifiableSolrParams;
 import org.apache.solr.common.util.NamedList;
 import org.slf4j.Logger;
@@ -31,7 +25,9 @@ import java.net.URI;
 import java.net.URL;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
@@ -221,7 +217,7 @@ public class SolrAdminActions {
     }
 
 
-    public void commit(String collectionName){
+    public void commit(String collectionName) {
         try {
             solrClient.commit(collectionName);
         } catch (SolrServerException | IOException e) {
@@ -230,14 +226,42 @@ public class SolrAdminActions {
         }
     }
 
-    public void deleteOrphansAfterIndexing(Collection<String> collections, String crawlId) {
-        for (String collection : collections) {
-            try {
-                solrClient.deleteByQuery(collection, "-crawlId:" + crawlId);
-            } catch (SolrServerException | IOException e) {
-                throw new RuntimeException(e);
+    public int deleteOrphansAfterIndexing(String collection, String crawlId) {
+        int numDeleted = 0;
+
+        try {
+            // Retrieve facet information for unique crawl IDs and their counts
+            SolrQuery query = new SolrQuery();
+            query.setQuery("*:*");
+            query.setRows(0);  // We don't need actual rows, just the facets
+            query.addFacetField("crawlId");
+            query.setFacetLimit(-1);  // Ensure we get all unique crawl IDs
+
+            QueryResponse queryResponse = solrClient.query(collection, query);
+            FacetField facetField = queryResponse.getFacetField("crawlId");
+            List<FacetField.Count> facetCounts = facetField.getValues();
+
+            for (FacetField.Count count : facetCounts) {
+                log.info("Crawl ID: {}, Count: {}", count.getName(), count.getCount());
             }
+
+            // Delete documents with the specified crawlId
+            UpdateResponse deleteResponse = solrClient.deleteByQuery(collection, "-crawlId:" + crawlId);
+            solrClient.commit(collection);
+
+            // Log and return the number of documents deleted
+            numDeleted = deleteResponse.getStatus() == 0 ? deleteResponse.getResponse().get("numFound") != null ? Integer.parseInt(deleteResponse.getResponse().get("numFound").toString()) : 0 : 0;
+            log.info("Number of documents deleted with crawlId {}: {}", crawlId, numDeleted);
+
+        } catch (SolrServerException e) {
+            log.error("Failed to delete documents from collection: {} for crawlId: {}. SolrServerException occurred.", collection, crawlId, e);
+            throw new RuntimeException("An error occurred while deleting documents from Solr collection: " + collection, e);
+        } catch (IOException e) {
+            log.error("Failed to delete documents from collection: {} for crawlId: {}. IOException occurred.", collection, crawlId, e);
+            throw new RuntimeException("An IO error occurred while deleting documents from Solr collection: " + collection, e);
         }
+
+        return numDeleted;
     }
 
 

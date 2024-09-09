@@ -16,7 +16,7 @@ public class VectorConfigurationService extends VectorConfigServiceGrpc.VectorCo
     @Override
     public void getVectorConfig(GetVectorConfigRequest request, StreamObserver<VectorConfig> responseObserver) {
         VectorConfig configuration = configurations.get(request.getId());
-        
+
         // If the configuration does not exist, return an error
         if (configuration == null) {
             responseObserver.onError(new RuntimeException("Configuration not found for ID: " + request.getId()));

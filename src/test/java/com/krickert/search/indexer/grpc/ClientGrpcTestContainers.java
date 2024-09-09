@@ -1,15 +1,12 @@
 package com.krickert.search.indexer.grpc;
 
 import com.github.dockerjava.api.command.CreateContainerCmd;
+import com.github.dockerjava.api.model.ExposedPort;
 import com.github.dockerjava.api.model.HostConfig;
 import com.github.dockerjava.api.model.PortBinding;
 import com.github.dockerjava.api.model.Ports;
-import com.github.dockerjava.api.model.ExposedPort;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.krickert.search.service.EmbeddingServiceGrpc;
-import io.grpc.ManagedChannel;
-import io.grpc.ManagedChannelBuilder;
 import io.micronaut.context.annotation.Requires;
 import io.micronaut.context.env.Environment;
 import jakarta.inject.Inject;
@@ -35,7 +32,8 @@ public class ClientGrpcTestContainers {
 
     private final Map<String, GrpcClientConfig> grpcClientConfigs;
 
-    record GrpcEntry(String name, String host, Integer grpcPort, Integer restPort) {}
+    record GrpcEntry(String name, String host, Integer grpcPort, Integer restPort) {
+    }
 
     @Inject
     public ClientGrpcTestContainers(Map<String, GrpcClientConfig> grpcClientConfigs) {

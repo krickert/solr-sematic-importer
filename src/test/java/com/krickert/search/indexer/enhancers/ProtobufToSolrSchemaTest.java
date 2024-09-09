@@ -31,7 +31,7 @@ public class ProtobufToSolrSchemaTest {
         try {
             generateProtoFiles();
             // Load .proto file
-           String protoFileContent = fileLoader.loadResource("file_descriptor_set.pb");
+            String protoFileContent = fileLoader.loadResource("file_descriptor_set.pb");
             DynamicSchema dynamicSchema = DynamicSchema.parseFrom(protoFileContent.getBytes());
 
             // Parse into FileDescriptorSet

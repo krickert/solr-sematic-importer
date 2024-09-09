@@ -54,9 +54,9 @@ public class VectorConfigMapper {
 
         if (javaConfig.getChunkOverlap() != null && javaConfig.getChunkSize() != null) {
             ChunkOptions chunkOptions = ChunkOptions.newBuilder()
-                .setOverlap(javaConfig.getChunkOverlap())
-                .setLength(javaConfig.getChunkSize())
-                .build();
+                    .setOverlap(javaConfig.getChunkOverlap())
+                    .setLength(javaConfig.getChunkSize())
+                    .build();
             protoBuilder.setChunkOptions(chunkOptions);
         }
 
@@ -64,8 +64,8 @@ public class VectorConfigMapper {
 
         if (javaConfig.getModel() != null) {
             DocumentEmbeddingModel embeddingModel = DocumentEmbeddingModel.newBuilder()
-                .setEmbeddingModel(javaConfig.getModel())
-                .build();
+                    .setEmbeddingModel(javaConfig.getModel())
+                    .build();
             protoBuilder.setEmbeddingModel(embeddingModel);
         }
 
@@ -80,19 +80,19 @@ public class VectorConfigMapper {
 
         if (javaConfig.getHnswMaxConnections() != null && javaConfig.getHnswBeamWidth() != null) {
             HnswOptions hnswOptions = HnswOptions.newBuilder()
-                .setHnswMaxConnections(javaConfig.getHnswMaxConnections())
-                .setHnswBeamWidth(javaConfig.getHnswBeamWidth())
-                .build();
+                    .setHnswMaxConnections(javaConfig.getHnswMaxConnections())
+                    .setHnswBeamWidth(javaConfig.getHnswBeamWidth())
+                    .build();
             protoBuilder.setHnswOptions(hnswOptions);
         }
 
         if (javaConfig.getCollectionCreation() != null) {
             SolrCollectionCreationConfig collectionCreation = SolrCollectionCreationConfig.newBuilder()
-                .setCollectionConfigFile(javaConfig.getCollectionCreation().getCollectionConfigFile())
-                .setCollectionConfigName(javaConfig.getCollectionCreation().getCollectionConfigName())
-                .setNumberOfShards(javaConfig.getCollectionCreation().getNumberOfShards())
-                .setNumberOfReplicas(javaConfig.getCollectionCreation().getNumberOfReplicas())
-                .build();
+                    .setCollectionConfigFile(javaConfig.getCollectionCreation().getCollectionConfigFile())
+                    .setCollectionConfigName(javaConfig.getCollectionCreation().getCollectionConfigName())
+                    .setNumberOfShards(javaConfig.getCollectionCreation().getNumberOfShards())
+                    .setNumberOfReplicas(javaConfig.getCollectionCreation().getNumberOfReplicas())
+                    .build();
             protoBuilder.setCollectionCreation(collectionCreation);
         }
 

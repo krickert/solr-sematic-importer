@@ -2,7 +2,6 @@ package com.krickert.search.indexer.grpc;
 
 import com.krickert.search.service.ChunkServiceGrpc;
 import com.krickert.search.service.EmbeddingServiceGrpc;
-import com.krickert.search.service.PipeServiceGrpc;
 import io.micronaut.context.ApplicationContext;
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
 import jakarta.inject.Inject;

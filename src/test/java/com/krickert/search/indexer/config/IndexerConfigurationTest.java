@@ -36,7 +36,7 @@ public class IndexerConfigurationTest {
         assertTrue(properties.getVectorGrpcChannel().endsWith(vectorizerPort));
         assertNotNull(properties.getChunkerGrpcChannel());
         assertTrue(properties.getChunkerGrpcChannel().endsWith(chunkerPort));
-        
+
         // Solr Configuration Assertions
         SolrConfiguration sourceConfig = indexerConfiguration.getSourceSolrConfiguration();
         assertNotNull(sourceConfig);
@@ -89,7 +89,7 @@ public class IndexerConfigurationTest {
         assertNull(titleConfig.getChunkOverlap());
         assertNull(titleConfig.getChunkSize());
         assertEquals("mini-LM", titleConfig.getModel());
-           assertFalse(titleConfig.getChunkField());
+        assertFalse(titleConfig.getChunkField());
         VectorConfig bodyConfig = vectorConfigMap.get("body");
         assertNotNull(bodyConfig);
         assertTrue(bodyConfig.getChunkField());

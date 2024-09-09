@@ -1,4 +1,5 @@
 package com.krickert.search.indexer.enhancers;
+
 import com.google.protobuf.*;
 import com.google.protobuf.util.JsonFormat;
 import jakarta.inject.Singleton;
@@ -6,7 +7,9 @@ import org.apache.solr.common.SolrInputDocument;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.*;
+import java.util.Date;
+import java.util.List;
+import java.util.Map;
 
 @Singleton
 public class ProtobufToSolrDocument {
@@ -62,7 +65,7 @@ public class ProtobufToSolrDocument {
             handleEmptyType(solrDoc, fieldName);
         } else if (entry.getValue() instanceof FieldMask fieldMask) {
             handleFieldMaskType(solrDoc, fieldMask, fieldName);
-        } else  {
+        } else {
             addFieldsToSolrDoc((Message) entry.getValue(), solrDoc, fieldName);
         }
     }
@@ -125,7 +128,7 @@ public class ProtobufToSolrDocument {
             String newFieldKey = prefix + "_" + entry.getKey();
             Value.KindCase type = entry.getValue().getKindCase();
 
-            switch(type){
+            switch (type) {
                 case BOOL_VALUE:
                     solrDoc.addField(newFieldKey, entry.getValue().getBoolValue());
                     break;

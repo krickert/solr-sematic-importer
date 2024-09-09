@@ -32,7 +32,7 @@ public class OktaAuthImpl implements OktaAuth {
     private final String clientSecret;
     private final String clientId;
     private final String tokenEndpoint;
-    
+
     private volatile String cachedToken;
     private volatile long tokenExpirationTime;
     private final ReentrantLock lock = new ReentrantLock();

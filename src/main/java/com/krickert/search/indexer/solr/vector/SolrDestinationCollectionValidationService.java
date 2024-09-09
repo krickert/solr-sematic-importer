@@ -14,10 +14,13 @@ import io.micronaut.scheduling.annotation.Scheduled;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 import org.apache.solr.client.solrj.SolrServerException;
+import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
@@ -126,8 +129,7 @@ public class SolrDestinationCollectionValidationService {
     private void validateChunkFieldConfig(String fieldName, VectorConfig vectorConfig) {
         String destinationCollection = vectorConfig.getDestinationCollection();
         if (StringUtils.isEmpty(destinationCollection)) {
-            destinationCollection = indexerConfiguration.getDestinationSolrConfiguration().getCollection() +
-                    "-" + fieldName + "-chunks";
+            destinationCollection = generateDestinationCollectionName(fieldName);
         }
 
         if (solrAdminActions.doesCollectionExist(destinationCollection)) {
@@ -150,6 +152,11 @@ public class SolrDestinationCollectionValidationService {
         }
     }
 
+    private @NotNull String generateDestinationCollectionName(String fieldName) {
+        return indexerConfiguration.getDestinationSolrConfiguration().getCollection() +
+                "-" + fieldName + "-chunks";
+    }
+
     private ValidateVectorFieldResponse validateVectorField(String vectorFieldName, VectorConfig vectorConfig, String destinationCollection) {
         try {
             String fieldCreated = vectorFieldValidator.validateVectorField(
@@ -165,7 +172,8 @@ public class SolrDestinationCollectionValidationService {
         }
     }
 
-    protected record ValidateVectorFieldRequest(String vectorFieldName, VectorConfig vectorConfig, String destinationCollection){
+    protected record ValidateVectorFieldRequest(String vectorFieldName, VectorConfig vectorConfig,
+                                                String destinationCollection) {
         @Override
         public String toString() {
             return MoreObjects.toStringHelper(this)
@@ -176,7 +184,9 @@ public class SolrDestinationCollectionValidationService {
         }
     }
 
-    protected record ValidateVectorFieldResponse(String fieldCreated,String fieldRequested, boolean fieldCreatedSuccessfully, ValidateVectorFieldRequest request, Integer dimensionality) {
+    protected record ValidateVectorFieldResponse(String fieldCreated, String fieldRequested,
+                                                 boolean fieldCreatedSuccessfully, ValidateVectorFieldRequest request,
+                                                 Integer dimensionality) {
 
         public boolean fieldChanged() {
             return !fieldRequested.equals(fieldCreated);
@@ -184,12 +194,30 @@ public class SolrDestinationCollectionValidationService {
     }
 
     private void validateDestinationCollection() {
-        if(solrAdminActions.doesCollectionExist(indexerConfiguration.getDestinationSolrConfiguration().getCollection())) {
+        if (solrAdminActions.doesCollectionExist(indexerConfiguration.getDestinationSolrConfiguration().getCollection())) {
             log.info("Destination collection already exists {}", indexerConfiguration.getDestinationSolrConfiguration().getCollection());
         } else {
             SolrConfiguration destinationSolrConfiguration = indexerConfiguration.getDestinationSolrConfiguration();
             String destinationCollection = destinationSolrConfiguration.getCollection();
             solrAdminActions.createCollection(destinationCollection, destinationSolrConfiguration.getCollectionCreation());
         }
+    }
+
+    public List<String> getVectorDestinationCollections() {
+        List<String> collections = new ArrayList<>();
+        for (Map.Entry<String, VectorConfig> entry : indexerConfiguration.getVectorConfig().entrySet()) {
+            String fieldName = entry.getKey();
+            VectorConfig vectorConfig = entry.getValue();
+            String destinationCollection = vectorConfig.getDestinationCollection();
+
+            if (org.apache.commons.lang3.StringUtils.isEmpty(destinationCollection)) {
+                destinationCollection = indexerConfiguration.getDestinationSolrConfiguration().getCollection() +
+                        "-" + fieldName + "-chunks";
+            }
+
+            collections.add(destinationCollection);
+        }
+
+        return collections;
     }
 }

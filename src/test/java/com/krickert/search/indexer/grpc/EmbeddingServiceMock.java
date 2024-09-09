@@ -6,12 +6,12 @@ import io.micronaut.context.annotation.Factory;
 import io.micronaut.context.annotation.Requires;
 import io.micronaut.context.env.Environment;
 
-import static org.mockito.Mockito.*;
-
 import java.util.List;
 import java.util.Random;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+
+import static org.mockito.Mockito.*;
 
 @Factory
 @Requires(env = Environment.TEST)

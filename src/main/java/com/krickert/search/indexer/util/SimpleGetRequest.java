@@ -11,7 +11,7 @@ import java.net.URISyntaxException;
 @Singleton
 public class SimpleGetRequest {
 
-    public String getResponseAsString(String url)  {
+    public String getResponseAsString(String url) {
         final URI uri;
         try {
             uri = new URI(url);

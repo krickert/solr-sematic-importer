@@ -20,11 +20,11 @@ public class OktaAuthenticatedRequestResponseListener extends RequestResponseLis
      * It extends the RequestResponseListener class.  It's used to add okta Bearer tokens to the header to allow the
      * client to use JWT authentication
      *
-     * @param oktaAuth the OktaAuth object used to obtain the access token
+     * @param oktaAuth  the OktaAuth object used to obtain the access token
      * @param isEnabled a boolean value indicating if authentication is enabled or not
      */
     @Inject
-    public OktaAuthenticatedRequestResponseListener(OktaAuth oktaAuth, @Value("${solr-config.destination.connection.authentication.enabled}") boolean isEnabled ) {
+    public OktaAuthenticatedRequestResponseListener(OktaAuth oktaAuth, @Value("${solr-config.destination.connection.authentication.enabled}") boolean isEnabled) {
         this.oktaAuth = oktaAuth;
         this.isEnabled = isEnabled;
     }

@@ -23,7 +23,7 @@ class SolrConfigurationMapperTest {
     void testMappingToProtobuf() {
         SolrConfigurationMap protoMap = SolrConfigurationMapper.toProtobuf(configs);
         assertNotNull(protoMap);
-        
+
         // Ensure the map contains both source and destination configurations
         assertTrue(protoMap.getConfigsMap().containsKey("source"));
         assertTrue(protoMap.getConfigsMap().containsKey("destination"));
@@ -35,7 +35,7 @@ class SolrConfigurationMapperTest {
         assertEquals(sourceConfig.getCollection(), sourceProto.getCollection());
         assertEquals(sourceConfig.getConnection().getUrl(), sourceProto.getConnection().getUrl());
         assertFalse(sourceProto.getConnection().getAuthentication().getEnabled());
-        
+
         // Validate destination configuration
         SolrConfig destinationProto = protoMap.getConfigsOrThrow("destination");
         SolrConfiguration destinationConfig = configs.get("destination");

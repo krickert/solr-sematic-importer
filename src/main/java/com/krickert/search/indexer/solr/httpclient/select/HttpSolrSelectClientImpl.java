@@ -56,6 +56,7 @@ public class HttpSolrSelectClientImpl implements HttpSolrSelectClient {
     public Long getTotalNumberOfDocumentsForCollection() {
         return getTotalNumberOfDocumentsForCollection(solrHost, solrCollection);
     }
+
     @Override
     public Long getTotalNumberOfDocumentsForCollection(String solr7Host, String solr7Collection) {
         try {

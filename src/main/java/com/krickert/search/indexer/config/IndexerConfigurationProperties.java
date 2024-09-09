@@ -1,9 +1,9 @@
 package com.krickert.search.indexer.config;
 
-import com.google.common.base.MoreObjects;
-import io.micronaut.context.annotation.ConfigurationProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.MoreObjects;
+import io.micronaut.context.annotation.ConfigurationProperties;
 import io.micronaut.serde.annotation.Serdeable;
 
 @ConfigurationProperties("indexer")

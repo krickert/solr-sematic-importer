@@ -17,7 +17,7 @@ public class SolrConfigurationService extends SolrConfigurationServiceImplBase {
     @Override
     public void getSolrConfiguration(GetSolrConfigurationRequest request, StreamObserver<SolrConfig> responseObserver) {
         SolrConfig configuration = configurations.get(request.getId());
-        
+
         // If the configuration does not exist, return an empty response
         if (configuration == null) {
             responseObserver.onError(new RuntimeException("Configuration not found for ID: " + request.getId()));

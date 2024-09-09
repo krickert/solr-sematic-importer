@@ -15,7 +15,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @Requires(notEnv = Environment.DEVELOPMENT)
 @Singleton
 public class SolrTestContainers {
-  
+
     private static final Logger log = LoggerFactory.getLogger(SolrTestContainers.class);
     private static SolrContainer container7;
     private static SolrContainer container9;
@@ -44,10 +44,10 @@ public class SolrTestContainers {
         if (!initialized) {
             DockerImageName SOLR7_IMAGE = DockerImageName.parse("solr:7.7.3");
             container7 = createContainer(SOLR7_IMAGE, solr7Port);
-            
+
             DockerImageName SOLR9_IMAGE = DockerImageName.parse("solr:9.6.1");
             container9 = createContainer(SOLR9_IMAGE, solr9Port);
-          
+
             initialized = true;
         }
     }

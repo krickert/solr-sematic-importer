@@ -83,7 +83,7 @@ public class IndexingStatus {
     public IndexingStatus(String indexingId, IndexerConfiguration indexerConfiguration, long totalDocumentsFound,
                           int totalDocumentsProcessed, int totalDocumentsFailed, float percentComplete,
                           int chunksProcessed, float chunksPerDocument, LocalDateTime timeStarted,
-                          LocalDateTime endTime, String currentStatus, float averageDocsPerSecond, 
+                          LocalDateTime endTime, String currentStatus, float averageDocsPerSecond,
                           float averageChunksPerSecond, int totalDocumentsDeleted, OverallStatus overallStatus,
                           LocalDateTime lastRun) {
         this.indexingId = indexingId;

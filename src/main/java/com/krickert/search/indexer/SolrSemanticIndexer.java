@@ -19,7 +19,10 @@ import org.slf4j.LoggerFactory;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
-import java.util.*;
+import java.util.Collection;
+import java.util.Date;
+import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -102,7 +105,14 @@ public class SolrSemanticIndexer implements SemanticIndexer {
         log.info("*****PROCESSING COMPLETE. {} pages processed. {} documents exported to destination collection {}", pagesProcessed.get(), totalExpected, solrDestinationCollection);
         solrAdminActions.commit(solrDestinationCollection);
         indexingTracker.finalizeTracking();
-        // TODO delete documents that do not have the crawler ID
+        deleteOrphans(solrDestinationCollection, crawlId);
+    }
+
+    private void deleteOrphans(String solrDestinationCollection, UUID crawlId) {
+        solrAdminActions.deleteOrphansAfterIndexing(solrDestinationCollection, crawlId.toString());
+        for (String vectorCollection : solrDestinationCollectionValidationService.getVectorDestinationCollections()) {
+            solrAdminActions.deleteOrphansAfterIndexing(vectorCollection, crawlId.toString());
+        }
     }
 
     public void processPages(String solr7Host, String solrSourceCollection, String solrDestinationCollection, Integer paginationSize, int currentPage, UUID crawlId, AtomicInteger pagesProcessed) {

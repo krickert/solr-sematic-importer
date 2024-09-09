@@ -1,6 +1,5 @@
 package com.krickert.search.indexer;
 
-import com.google.api.Http;
 import io.micronaut.http.HttpRequest;
 import io.micronaut.http.HttpResponse;
 import io.micronaut.http.client.HttpClient;

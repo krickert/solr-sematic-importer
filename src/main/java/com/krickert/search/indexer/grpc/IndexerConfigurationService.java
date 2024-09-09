@@ -28,15 +28,15 @@ public class IndexerConfigurationService extends IndexerConfigurationServiceImpl
 
     @Override
     public void getIndexerConfiguration(GetIndexerConfigurationRequest request, StreamObserver<IndexerConfiguration> responseObserver) {
-        IndexerConfiguration configuration = configurations.getOrDefault(request.getId(), 
-            IndexerConfiguration.newBuilder()
-                .setVectorGrpcChannel(defaultVectorGrpcChannel)
-                .setChunkerGrpcChannel(defaultChunkerGrpcChannel)
-                .setSourceSeedData(SourceSeedData.newBuilder()
-                    .setEnabled(defaultSourceSeedDataEnabled)
-                    .setSeedJsonFile(defaultSeedJsonFile)
-                    .build())
-                .build());
+        IndexerConfiguration configuration = configurations.getOrDefault(request.getId(),
+                IndexerConfiguration.newBuilder()
+                        .setVectorGrpcChannel(defaultVectorGrpcChannel)
+                        .setChunkerGrpcChannel(defaultChunkerGrpcChannel)
+                        .setSourceSeedData(SourceSeedData.newBuilder()
+                                .setEnabled(defaultSourceSeedDataEnabled)
+                                .setSeedJsonFile(defaultSeedJsonFile)
+                                .build())
+                        .build());
 
         responseObserver.onNext(configuration);
         responseObserver.onCompleted();

@@ -1,7 +1,7 @@
 package com.krickert.search.indexer.grpc;
 
-import io.micronaut.core.annotation.Introspected;
 import io.micronaut.context.annotation.EachProperty;
+import io.micronaut.core.annotation.Introspected;
 
 @EachProperty("grpc-test-client-config")
 @Introspected

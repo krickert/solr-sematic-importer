@@ -17,7 +17,7 @@ public class GrpcContainerIntegrationTest {
     @Test
     void test() {
         Assertions.assertNotNull(clientGrpcTestContainers);
-        for(GenericContainer<?> container : clientGrpcTestContainers.getContainers()) {
+        for (GenericContainer<?> container : clientGrpcTestContainers.getContainers()) {
             Assertions.assertNotNull(container);
             Assertions.assertTrue(container.isRunning());
             Assertions.assertTrue(container.isCreated());

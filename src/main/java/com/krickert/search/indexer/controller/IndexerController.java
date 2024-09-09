@@ -14,11 +14,7 @@ import io.micronaut.security.annotation.Secured;
 import io.micronaut.security.rules.SecurityRule;
 import jakarta.inject.Inject;
 
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 
 @Controller("/indexer")
 public class IndexerController {
@@ -80,7 +76,7 @@ public class IndexerController {
         } catch (Exception e) {
             IndexingStatus errorStatus = new IndexingStatus();
             errorStatus.setCurrentStatus("Error retrieving status: " + e.getMessage());
-            errorStatus.setOverallStatus(IndexingStatus.OverallStatus.NOT_STARTED); 
+            errorStatus.setOverallStatus(IndexingStatus.OverallStatus.NOT_STARTED);
             return HttpResponse.serverError(errorStatus);
         }
     }

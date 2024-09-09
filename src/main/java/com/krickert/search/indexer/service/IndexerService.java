@@ -1,8 +1,8 @@
 package com.krickert.search.indexer.service;
 
+import com.krickert.search.indexer.SemanticIndexer;
 import com.krickert.search.indexer.config.IndexerConfiguration;
 import com.krickert.search.indexer.dto.IndexingStatus;
-import com.krickert.search.indexer.SemanticIndexer;
 import com.krickert.search.indexer.tracker.IndexingTracker;
 import io.micronaut.scheduling.annotation.Scheduled;
 import jakarta.inject.Inject;

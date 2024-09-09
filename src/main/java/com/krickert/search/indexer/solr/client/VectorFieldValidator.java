@@ -79,8 +79,7 @@ public class VectorFieldValidator {
 
     private void validateFieldTypeAttributes(
             String similarityFunction, Integer hnswMaxConnections, Integer hnswBeamWidth, Integer dimensionality,
-            FieldTypeRepresentation fieldTypeRepresentation, String vectorFieldType) 
-    {
+            FieldTypeRepresentation fieldTypeRepresentation, String vectorFieldType) {
         Map<String, Object> attributes = fieldTypeRepresentation.getAttributes();
         String fieldTypeClass = (String) attributes.get("class");
         if (!"solr.DenseVectorField".equals(fieldTypeClass)) {
@@ -168,8 +167,7 @@ public class VectorFieldValidator {
 
     private void createDenseVectorFieldType(
             String fieldType, Integer dimensionality, String similarityFunction, Integer hnswMaxConnections,
-            Integer hnswBeamWidth, String collectionName) throws IOException, SolrServerException 
-    {
+            Integer hnswBeamWidth, String collectionName) throws IOException, SolrServerException {
         Map<String, Object> fieldTypeAttributes = new HashMap<>();
         fieldTypeAttributes.put("name", fieldType);
         fieldTypeAttributes.put("class", "solr.DenseVectorField");

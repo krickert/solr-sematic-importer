@@ -28,14 +28,15 @@ public class JsonToSolrDocParser {
     public Collection<String> parseSolrDocumentsToJSON(String jsonString) {
         Map<String, Object> map;
         try {
-            map = mapper.readValue(jsonString, new TypeReference<>() {});
+            map = mapper.readValue(jsonString, new TypeReference<>() {
+            });
         } catch (JsonProcessingException e) {
             throw new RuntimeException(e);
         }
-        @SuppressWarnings( "unchecked")
-        Map<String, Object> response = (Map<String, Object>)map.get("response");
-        @SuppressWarnings( "unchecked")
-        List<Map<String, Object>> docs = (List<Map<String, Object>>)response.get("docs");
+        @SuppressWarnings("unchecked")
+        Map<String, Object> response = (Map<String, Object>) map.get("response");
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> docs = (List<Map<String, Object>>) response.get("docs");
 
         List<String> jsonDocuments = new ArrayList<>();
         for (Map<String, Object> doc : docs) {
@@ -53,16 +54,17 @@ public class JsonToSolrDocParser {
     public HttpSolrSelectResponse parseSolrDocuments(String jsonString) {
         Map<String, Object> map;
         try {
-            map = mapper.readValue(jsonString, new TypeReference<>() {});
+            map = mapper.readValue(jsonString, new TypeReference<>() {
+            });
         } catch (JsonProcessingException e) {
             throw new RuntimeException(e);
         }
-        @SuppressWarnings( "unchecked")
-        Map<String, Object> response = (Map<String, Object>)map.get("response");
-        @SuppressWarnings( "unchecked")
-        Map<String, Object> responseHeader = (Map<String, Object>)map.get("responseHeader");
-        @SuppressWarnings( "unchecked")
-        List<Map<String, Object>> docs = (List<Map<String, Object>>)response.get("docs");
+        @SuppressWarnings("unchecked")
+        Map<String, Object> response = (Map<String, Object>) map.get("response");
+        @SuppressWarnings("unchecked")
+        Map<String, Object> responseHeader = (Map<String, Object>) map.get("responseHeader");
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> docs = (List<Map<String, Object>>) response.get("docs");
 
         List<SolrInputDocument> solrDocuments = new ArrayList<>();
         for (Map<String, Object> doc : docs) {

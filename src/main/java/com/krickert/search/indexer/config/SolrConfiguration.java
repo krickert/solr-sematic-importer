@@ -1,12 +1,12 @@
 package com.krickert.search.indexer.config;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.MoreObjects;
 import io.micronaut.context.annotation.ConfigurationProperties;
 import io.micronaut.context.annotation.EachProperty;
 import io.micronaut.context.annotation.Parameter;
 import io.micronaut.serde.annotation.Serdeable;
-import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.annotation.JsonProperty;
 
 @Serdeable
 @EachProperty("solr-config")
@@ -131,6 +131,7 @@ public class SolrConfiguration {
         public void setNumberOfReplicas(int numberOfReplicas) {
             this.numberOfReplicas = numberOfReplicas;
         }
+
         @Override
         public String toString() {
             return MoreObjects.toStringHelper(this)

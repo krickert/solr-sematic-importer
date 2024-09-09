@@ -7,7 +7,8 @@ import com.krickert.search.service.ChunkOptions;
 import com.krickert.search.service.DocumentEmbeddingModel;
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 class VectorConfigMapperTest {
 
@@ -85,19 +86,19 @@ class VectorConfigMapperTest {
 
     private com.krickert.search.indexer.grpc.VectorConfig createTestProtoConfig() {
         return com.krickert.search.indexer.grpc.VectorConfig.newBuilder()
-            .setChunkOptions(ChunkOptions.newBuilder().setOverlap(5).setLength(10).build())
-            .setChunkField(true)
-            .setEmbeddingModel(DocumentEmbeddingModel.newBuilder().setEmbeddingModel("ALL_MINILM_L12_V2").build())
-            .setDestinationCollection("myCollection")
-            .setChunkFieldVectorName("chunkVector")
-            .setSimilarityFunction(SimilarityFunction.COSINE)
-            .setHnswOptions(HnswOptions.newBuilder().setHnswMaxConnections(16).setHnswBeamWidth(8).build())
-            .setCollectionCreation(SolrCollectionCreationConfig.newBuilder()
-                .setCollectionConfigFile("/path/to/config")
-                .setCollectionConfigName("testCollection")
-                .setNumberOfShards(3)
-                .setNumberOfReplicas(2)
-                .build())
-            .build();
+                .setChunkOptions(ChunkOptions.newBuilder().setOverlap(5).setLength(10).build())
+                .setChunkField(true)
+                .setEmbeddingModel(DocumentEmbeddingModel.newBuilder().setEmbeddingModel("ALL_MINILM_L12_V2").build())
+                .setDestinationCollection("myCollection")
+                .setChunkFieldVectorName("chunkVector")
+                .setSimilarityFunction(SimilarityFunction.COSINE)
+                .setHnswOptions(HnswOptions.newBuilder().setHnswMaxConnections(16).setHnswBeamWidth(8).build())
+                .setCollectionCreation(SolrCollectionCreationConfig.newBuilder()
+                        .setCollectionConfigFile("/path/to/config")
+                        .setCollectionConfigName("testCollection")
+                        .setNumberOfShards(3)
+                        .setNumberOfReplicas(2)
+                        .build())
+                .build();
     }
 }
