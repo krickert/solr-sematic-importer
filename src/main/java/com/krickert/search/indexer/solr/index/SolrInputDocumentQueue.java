@@ -12,6 +12,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.util.Collection;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -34,6 +35,7 @@ public class SolrInputDocumentQueue {
     @Retryable(attempts = "5", delay = "500ms", includes = RuntimeException.class)
     public void addDocument(String collection, SolrInputDocument document, SolrDocumentType type) {
         try {
+            log.info("Adding document {} of type {} to Solr collection: {}", document.getFieldValue("id"), type, collection);
             solrClient.add(collection, document);
             indexingTracker.documentProcessed();
         } catch (SolrServerException | IOException e) {
@@ -46,6 +48,8 @@ public class SolrInputDocumentQueue {
     @Retryable(attempts = "5", delay = "500ms", includes = RuntimeException.class)
     public void addDocuments(String collection, List<SolrInputDocument> documents, SolrDocumentType type) {
         try {
+            List<String> ids = documents.stream().map(doc -> (String) doc.getFieldValue("id")).toList();
+            log.info("Adding {} documents of type {} to Solr collection: {} with ids: {}", documents.size(), type, collection, ids);
             solrClient.add(collection, documents);
             documents.forEach(doc -> indexingTracker.chunkProcessed());
         } catch (SolrServerException | IOException e) {

@@ -18,7 +18,7 @@ public class EmbeddingServiceMockTest {
                 .setText("dummy text")
                 .build();
         EmbeddingsVectorReply vectorReply = mockStub.createEmbeddingsVector(vectorRequest);
-        log.info("createEmbeddingsVector: " + vectorReply.getEmbeddingsList());
+        log.debug("createEmbeddingsVector: " + vectorReply.getEmbeddingsList());
 
         // Test createEmbeddingsVectors
         EmbeddingsVectorsRequest vectorsRequest = EmbeddingsVectorsRequest.newBuilder()
@@ -26,11 +26,11 @@ public class EmbeddingServiceMockTest {
                 .addText("text two")
                 .build();
         EmbeddingsVectorsReply vectorsReply = mockStub.createEmbeddingsVectors(vectorsRequest);
-        log.info("createEmbeddingsVectors: " + vectorsReply.getEmbeddingsList());
+        log.debug("createEmbeddingsVectors: " + vectorsReply.getEmbeddingsList());
 
         // Test check (health check)
         HealthCheckRequest healthRequest = HealthCheckRequest.newBuilder().build();
         HealthCheckReply healthReply = mockStub.check(healthRequest);
-        log.info("check: " + healthReply.getStatus());
+        log.debug("check: " + healthReply.getStatus());
     }
 }

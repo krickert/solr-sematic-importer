@@ -7,6 +7,7 @@ import com.github.dockerjava.api.model.PortBinding;
 import com.github.dockerjava.api.model.Ports;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.krickert.search.indexer.config.IndexerConfiguration;
 import io.micronaut.context.annotation.Requires;
 import io.micronaut.context.env.Environment;
 import jakarta.inject.Inject;
@@ -36,21 +37,21 @@ public class ClientGrpcTestContainers {
     }
 
     @Inject
-    public ClientGrpcTestContainers(Map<String, GrpcClientConfig> grpcClientConfigs) {
+    public ClientGrpcTestContainers(Map<String, GrpcClientConfig> grpcClientConfigs, IndexerConfiguration configuration) {
         this.grpcClientConfigs = grpcClientConfigs;
-        initializeContainers(grpcClientConfigs);
+        initializeContainers(grpcClientConfigs, configuration);
     }
 
-    private synchronized static void initializeContainers(Map<String, GrpcClientConfig> grpcClientConfigs) {
+    private synchronized static void initializeContainers(Map<String, GrpcClientConfig> grpcClientConfigs, IndexerConfiguration configuration) {
         if (!initialized) {
             for (Map.Entry<String, GrpcClientConfig> entry : grpcClientConfigs.entrySet()) {
-                containers.add(createContainer(entry.getValue()));
+                containers.add(createContainer(entry.getValue(), configuration));
             }
             initialized = true;
         }
     }
 
-    private static GenericContainer<?> createContainer(GrpcClientConfig config) {
+    private static GenericContainer<?> createContainer(GrpcClientConfig config, IndexerConfiguration configuration) {
         DockerImageName imageName = DockerImageName.parse(config.getDockerImageName());
 
         GenericContainer<?> container = new GenericContainer<>(imageName)
@@ -78,6 +79,10 @@ public class ClientGrpcTestContainers {
                     container.getHost(),
                     container.getMappedPort(config.getGrpcMappedPort()),
                     container.getMappedPort(config.getRestMappedPort())));
+            if (service.equals("vectorizer") || service.equals("chunker")) {
+                configuration.getIndexerConfigurationProperties().setVectorGrpcChannel("localhost:" + grpcPort);
+
+            }
 
         } catch (Exception e) {
             log.error("Error when starting container for image {}, exception: {}", config.getDockerImageName(), ExceptionUtils.getStackTrace(e));

@@ -234,11 +234,11 @@ public class SolrAdminActions {
             SolrQuery query = new SolrQuery();
             query.setQuery("*:*");
             query.setRows(0);  // We don't need actual rows, just the facets
-            query.addFacetField("crawlId");
+            query.addFacetField("crawl_id");
             query.setFacetLimit(-1);  // Ensure we get all unique crawl IDs
 
             QueryResponse queryResponse = solrClient.query(collection, query);
-            FacetField facetField = queryResponse.getFacetField("crawlId");
+            FacetField facetField = queryResponse.getFacetField("crawl_id");
             List<FacetField.Count> facetCounts = facetField.getValues();
 
             for (FacetField.Count count : facetCounts) {
@@ -246,7 +246,7 @@ public class SolrAdminActions {
             }
 
             // Delete documents with the specified crawlId
-            UpdateResponse deleteResponse = solrClient.deleteByQuery(collection, "-crawlId:" + crawlId);
+            UpdateResponse deleteResponse = solrClient.deleteByQuery(collection, "-crawl_id:" + crawlId);
             solrClient.commit(collection);
 
             // Log and return the number of documents deleted

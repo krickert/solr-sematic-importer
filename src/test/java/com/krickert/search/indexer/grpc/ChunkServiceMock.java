@@ -12,7 +12,6 @@ import java.util.*;
 import static java.lang.reflect.Modifier.isPublic;
 import static org.mockito.Mockito.*;
 
-@Factory
 public class ChunkServiceMock {
 
     private final Faker faker = new Faker();
@@ -51,7 +50,6 @@ public class ChunkServiceMock {
         }
     }
 
-    @Bean
     public ChunkServiceGrpc.ChunkServiceBlockingStub createMock() {
         ChunkServiceGrpc.ChunkServiceBlockingStub mockStub = mock(ChunkServiceGrpc.ChunkServiceBlockingStub.class);
 

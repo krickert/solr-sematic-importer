@@ -49,7 +49,7 @@ public class SolrVectorIndexingService {
     }
 
 
-    public void addVectorFieldsToSolr(SolrInputDocument solrInputDocument, String crawlId, Date dateCreated) {
+    public void addDocsWithVectorsToSolr(SolrInputDocument solrInputDocument, String crawlId, Date dateCreated) {
         checkNotNull(solrInputDocument);
 
         String origDocId = Optional.ofNullable(solrInputDocument.getFieldValue("id"))
@@ -184,14 +184,14 @@ public class SolrVectorIndexingService {
 
         SolrInputDocument document = new SolrInputDocument();
         document.addField("id", docId);
-        document.addField("parentId", parentId);
+        document.addField("parent_id", parentId);
         document.addField("chunk", chunk);
-        document.addField("chunkNumber", chunkNumber);
+        document.addField("chunk_number", chunkNumber);
         document.addField(vectorFieldName, vector);
-        document.addField("parentFieldName", parentFieldName);
-        document.addField("crawlId", crawlId);
-        document.addField("dateCreated", dateCreated);
-        document.addField("parentCollection", parentCollection);
+        document.addField("parent_field_name", parentFieldName);
+        document.addField("crawl_id", crawlId);
+        document.addField("date_created", dateCreated);
+        document.addField("parent_collection", parentCollection);
 
         return document;
     }

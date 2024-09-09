@@ -103,14 +103,18 @@ public class SolrSemanticIndexer implements SemanticIndexer {
             throw new RuntimeException(e);
         }
         log.info("*****PROCESSING COMPLETE. {} pages processed. {} documents exported to destination collection {}", pagesProcessed.get(), totalExpected, solrDestinationCollection);
+        solrInputDocumentQueue.commit(solrDestinationCollection);
         solrAdminActions.commit(solrDestinationCollection);
         indexingTracker.finalizeTracking();
         deleteOrphans(solrDestinationCollection, crawlId);
     }
 
     private void deleteOrphans(String solrDestinationCollection, UUID crawlId) {
+        log.info("Deleting orphans from collection {}.  All documents without UUID {} will be deleted", solrDestinationCollection, crawlId);
         solrAdminActions.deleteOrphansAfterIndexing(solrDestinationCollection, crawlId.toString());
-        for (String vectorCollection : solrDestinationCollectionValidationService.getVectorDestinationCollections()) {
+        Collection<String> vectorCollections = solrDestinationCollectionValidationService.getVectorDestinationCollections();
+        log.info("Deleting orphans from vector collections {}.  All documents without UUID {} will be deleted", vectorCollections, crawlId);
+        for (String vectorCollection : vectorCollections) {
             solrAdminActions.deleteOrphansAfterIndexing(vectorCollection, crawlId.toString());
         }
     }
@@ -147,15 +151,19 @@ public class SolrSemanticIndexer implements SemanticIndexer {
     private void processDocuments(Collection<SolrInputDocument> documents, String solrDestinationCollection, UUID crawlId) {
         documents.parallelStream().forEach(doc -> {
             insertCreationDate(doc);
+            insertCrawlId(doc, crawlId);
             try {
-                solrIndexingService.addVectorFieldsToSolr(doc, crawlId.toString(), Date.from(Instant.now()));
-                solrInputDocumentQueue.addDocument(solrDestinationCollection, doc, SolrDocumentType.DOCUMENT);
+                solrIndexingService.addDocsWithVectorsToSolr(doc, crawlId.toString(), Date.from(Instant.now()));
             } catch (Exception e) {
                 indexingTracker.documentFailed();
                 log.error("Failed to process document with ID: {}", doc.getFieldValue("id"), e);
             }
         });
         documents.forEach(doc -> indexingTracker.documentProcessed());
+    }
+
+    private static void insertCrawlId(SolrInputDocument doc, UUID crawlId) {
+        doc.setField("crawl_id", crawlId.toString());
     }
 
     private static void insertCreationDate(SolrInputDocument doc) {

@@ -26,6 +26,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
 import static com.google.common.base.Preconditions.checkNotNull;
+import static org.apache.commons.lang3.StringUtils.isEmpty;
 
 @Singleton
 public class SolrDestinationCollectionValidationService {
@@ -210,7 +211,7 @@ public class SolrDestinationCollectionValidationService {
             VectorConfig vectorConfig = entry.getValue();
             String destinationCollection = vectorConfig.getDestinationCollection();
 
-            if (org.apache.commons.lang3.StringUtils.isEmpty(destinationCollection)) {
+            if (isEmpty(destinationCollection) && entry.getValue().getChunkField()) {
                 destinationCollection = indexerConfiguration.getDestinationSolrConfiguration().getCollection() +
                         "-" + fieldName + "-chunks";
             }
