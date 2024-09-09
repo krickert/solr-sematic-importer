@@ -29,7 +29,6 @@ public class ClientGrpcTestContainers {
 
     private static final List<GenericContainer<?>> containers = Lists.newArrayList();
     private static final Map<String, GrpcEntry> containerRegistry = Maps.newHashMap();
-    private static boolean initialized = false;
 
     private final Map<String, GrpcClientConfig> grpcClientConfigs;
 
@@ -42,16 +41,13 @@ public class ClientGrpcTestContainers {
         initializeContainers(grpcClientConfigs, configuration);
     }
 
-    private synchronized static void initializeContainers(Map<String, GrpcClientConfig> grpcClientConfigs, IndexerConfiguration configuration) {
-        if (!initialized) {
-            for (Map.Entry<String, GrpcClientConfig> entry : grpcClientConfigs.entrySet()) {
-                containers.add(createContainer(entry.getValue(), configuration));
-            }
-            initialized = true;
+    private void initializeContainers(Map<String, GrpcClientConfig> grpcClientConfigs, IndexerConfiguration configuration) {
+        for (Map.Entry<String, GrpcClientConfig> entry : grpcClientConfigs.entrySet()) {
+            containers.add(createContainer(entry.getValue(), configuration));
         }
     }
 
-    private static GenericContainer<?> createContainer(GrpcClientConfig config, IndexerConfiguration configuration) {
+    private GenericContainer<?> createContainer(GrpcClientConfig config, IndexerConfiguration configuration) {
         DockerImageName imageName = DockerImageName.parse(config.getDockerImageName());
 
         GenericContainer<?> container = new GenericContainer<>(imageName)
@@ -106,7 +102,7 @@ public class ClientGrpcTestContainers {
         return containerRegistry.get(containerName).grpcPort;
     }
 
-    private static void configureContainer(CreateContainerCmd cmd, GrpcClientConfig config) {
+    private void configureContainer(CreateContainerCmd cmd, GrpcClientConfig config) {
         HostConfig hostConfig = HostConfig.newHostConfig()
                 .withMemory(1024 * 1024 * 1024L)
                 .withMemorySwap(1024 * 1024 * 1024L)
