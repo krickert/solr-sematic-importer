@@ -2,6 +2,7 @@ package com.krickert.search.indexer.solr.index;
 
 import com.krickert.search.indexer.dto.SolrDocumentType;
 import com.krickert.search.indexer.tracker.IndexingTracker;
+import io.micronaut.core.util.CollectionUtils;
 import io.micronaut.retry.annotation.Retryable;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
@@ -48,6 +49,10 @@ public class SolrInputDocumentQueue {
     @Retryable(attempts = "5", delay = "500ms", includes = RuntimeException.class)
     public void addDocuments(String collection, List<SolrInputDocument> documents, SolrDocumentType type) {
         try {
+            if (CollectionUtils.isEmpty(documents)){
+                log.info("There are no {} documents to add to Solr collection: {}", type, collection);
+                return;
+            }
             List<String> ids = documents.stream().map(doc -> (String) doc.getFieldValue("id")).toList();
             log.info("Adding {} documents of type {} to Solr collection: {} with ids: {}", documents.size(), type, collection, ids);
             solrClient.add(collection, documents);
