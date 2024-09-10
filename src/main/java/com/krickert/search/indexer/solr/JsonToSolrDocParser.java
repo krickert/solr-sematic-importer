@@ -1,6 +1,9 @@
 package com.krickert.search.indexer.solr;
 
+import com.fasterxml.jackson.core.JsonFactory;
+import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.JsonToken;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.krickert.search.indexer.solr.httpclient.select.HttpSolrSelectResponse;
@@ -10,6 +13,7 @@ import org.apache.solr.common.SolrInputField;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -94,5 +98,80 @@ public class JsonToSolrDocParser {
                 .docs(solrDocuments)
                 .pageSize(pageSize)
                 .build();
+    }
+
+    private final JsonFactory factory = new JsonFactory();
+
+    public List<SolrInputDocument> parseSolrDocuments(InputStream inputStream) {
+        List<SolrInputDocument> solrDocuments = new ArrayList<>();
+        try (JsonParser parser = factory.createParser(inputStream)) {
+            String currentField = null;
+            while (!parser.isClosed()) {
+                JsonToken token = parser.nextToken();
+                if (token == JsonToken.FIELD_NAME) {
+                    currentField = parser.getCurrentName();
+                } else if ("docs".equals(currentField) && token == JsonToken.START_ARRAY) {
+                    // Start processing documents array
+                    token = parser.nextToken();
+                    while (token != JsonToken.END_ARRAY) {
+                        SolrInputDocument solrDoc = parseSolrDocument(parser);
+                        solrDoc.remove("_version_");
+                        solrDocuments.add(solrDoc);
+                        token = parser.nextToken();
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.error("Error parsing Solr documents", e);
+            throw new RuntimeException(e);
+        }
+        return solrDocuments;
+    }
+
+    private SolrInputDocument parseSolrDocument(JsonParser parser) throws Exception {
+        SolrInputDocument solrDoc = new SolrInputDocument();
+        String fieldName = null;
+        while (parser.nextToken() != JsonToken.END_OBJECT) {
+            JsonToken token = parser.currentToken();
+            if (token == JsonToken.FIELD_NAME) {
+                fieldName = parser.getCurrentName();
+            } else if (token == JsonToken.VALUE_STRING) {
+                solrDoc.addField(fieldName, parser.getValueAsString());
+            } else if (token == JsonToken.VALUE_NUMBER_INT) {
+                solrDoc.addField(fieldName, parser.getValueAsInt());
+            } else if (token == JsonToken.VALUE_NUMBER_FLOAT) {
+                solrDoc.addField(fieldName, parser.getValueAsDouble());
+            } else if (token == JsonToken.VALUE_TRUE || token == JsonToken.VALUE_FALSE) {
+                solrDoc.addField(fieldName, parser.getValueAsBoolean());
+            } else if (token == JsonToken.START_ARRAY) {
+                solrDoc.addField(fieldName, parseArray(parser));
+            } else {
+                log.warn("Unhandled token type: {}", token);
+            }
+        }
+        return solrDoc;
+    }
+
+    private List<Object> parseArray(JsonParser parser) throws Exception {
+        List<Object> list = new ArrayList<>();
+        while (parser.nextToken() != JsonToken.END_ARRAY) {
+            JsonToken token = parser.currentToken();
+            if (token == JsonToken.VALUE_STRING) {
+                list.add(parser.getValueAsString());
+            } else if (token == JsonToken.VALUE_NUMBER_INT) {
+                list.add(parser.getValueAsInt());
+            } else if (token == JsonToken.VALUE_NUMBER_FLOAT) {
+                list.add(parser.getValueAsDouble());
+            } else if (token == JsonToken.VALUE_TRUE || token == JsonToken.VALUE_FALSE) {
+                list.add(parser.getValueAsBoolean());
+            } else if (token == JsonToken.START_OBJECT) {
+                list.add(parseSolrDocument(parser));
+            } else if (token == JsonToken.START_ARRAY) {
+                list.add(parseArray(parser));
+            } else {
+                log.warn("Unhandled token type in array: {}", token);
+            }
+        }
+        return list;
     }
 }

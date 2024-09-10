@@ -63,4 +63,13 @@ public abstract class SolrAdminTaskClient {
 
     @Get("/{collection}/admin/ping")
     public abstract HttpResponse<String> ping(String collection);
+
+    @Post("/{collection}/update/json/docs")
+    public HttpResponse<String> postJsonDocs(@PathVariable String collection, @Body InputStream docsInputStream) {
+        log.info("Posting JSON documents to collection {} ...", collection);
+
+        return httpClient.toBlocking()
+                .exchange(HttpRequest.POST("/" + collection + "/update/json/docs?commit=true", docsInputStream)
+                        .contentType(MediaType.APPLICATION_JSON), String.class);
+    }
 }
