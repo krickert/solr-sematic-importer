@@ -40,7 +40,7 @@ public class HttpSolrSelectClientImpl implements HttpSolrSelectClient {
     }
 
     @Override
-    public String getSolrDocs(Integer paginationSize, Integer pageNumber) throws IOException, InterruptedException {
+    public String getSolrDocs(Integer paginationSize, Integer pageNumber) {
         return simpleGetRequest.getResponseAsString(createSolrRequest(solrHost, solrCollection, paginationSize, pageNumber));
     }
 
@@ -58,10 +58,10 @@ public class HttpSolrSelectClientImpl implements HttpSolrSelectClient {
     }
 
     @Override
-    public Long getTotalNumberOfDocumentsForCollection(String solr7Host, String solr7Collection) {
+    public Long getTotalNumberOfDocumentsForCollection(String solrHost, String solrCollection) {
         try {
             // Create the request for getting the total number of documents
-            String solrRequestUrl = solr7Host + "/" + solr7Collection + "/select?q=*:*&wt=json&rows=0";
+            String solrRequestUrl = solrHost + "/" + solrCollection + "/select?q=*:*&wt=json&rows=0";
 
             // Get the response as a string
             String responseStr = simpleGetRequest.getResponseAsString(solrRequestUrl);
