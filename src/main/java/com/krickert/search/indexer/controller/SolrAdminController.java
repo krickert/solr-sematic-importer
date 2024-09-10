@@ -19,8 +19,11 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
 
 @Controller("/api/solr-admin")
 public class SolrAdminController {
@@ -129,19 +132,41 @@ public class SolrAdminController {
     @Post("/uploadJsonDocs/{collection}")
     @Consumes(MediaType.MULTIPART_FORM_DATA)
     @Produces(MediaType.APPLICATION_JSON)
-    public Map<String, String> uploadJsonDocs(@PathVariable String collection, @Part("file") CompletedFileUpload jsonFile) {
-        log.info("Uploading JSON documents to collection {}", collection);
+    public Map<String, String> uploadJsonDocs(@PathVariable String collection, @Part("file") CompletedFileUpload zipFile) {
+        log.info("Uploading JSON documents from ZIP to collection {}", collection);
 
-        try (InputStream docsInputStream = jsonFile.getInputStream()) {
-            // Parse the input stream to get the list of SolrInputDocuments
-            List<SolrInputDocument> solrDocs = jsonToSolrDocParser.parseSolrDocuments(docsInputStream);
+        try (InputStream zipInputStream = zipFile.getInputStream();
+             ZipInputStream zis = new ZipInputStream(zipInputStream)) {
 
-            // Serialize parsed Solr documents back to InputStream
+            ZipEntry zipEntry;
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            objectMapper.writeValue(baos, solrDocs);
-            InputStream parsedDocsInputStream = new ByteArrayInputStream(baos.toByteArray());
 
+            while ((zipEntry = zis.getNextEntry()) != null) {
+                if (!zipEntry.isDirectory() && zipEntry.getName().endsWith(".json")) {
+                    log.info("Processing file: {}", zipEntry.getName());
+
+                    // Read the JSON file content from the zip entry
+                    ByteArrayOutputStream jsonBaos = new ByteArrayOutputStream();
+                    byte[] buffer = new byte[1024];
+                    int len;
+                    while ((len = zis.read(buffer)) > -1) {
+                        jsonBaos.write(buffer, 0, len);
+                    }
+
+                    // Parse the JSON content to SolrInputDocuments
+                    List<SolrInputDocument> solrDocs = jsonToSolrDocParser.parseSolrDocuments(
+                            new ByteArrayInputStream(jsonBaos.toByteArray())
+                    );
+
+                    // Append each document as a new line in the baos
+                    baos.write(objectMapper.writeValueAsBytes(solrDocs));
+                    baos.write("\n".getBytes(StandardCharsets.UTF_8));
+                }
+            }
+
+            InputStream parsedDocsInputStream = new ByteArrayInputStream(baos.toByteArray());
             HttpResponse<String> response = solrAdminTaskClient.postJsonDocs(collection, parsedDocsInputStream);
+
             if (response.getStatus().getCode() == 200) {
                 return Map.of("status", "JSON documents upload request sent");
             } else {
