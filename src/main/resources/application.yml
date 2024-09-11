@@ -1,6 +1,10 @@
 micronaut:
   application:
     name: indexer-web-ui
+  server:
+    multipart:
+      max-file-size: 104857600  # 100 MB in bytes
+      max-request-size: 104857600  # 100 MB in bytes
   router:
     static-resources:
       swagger:
