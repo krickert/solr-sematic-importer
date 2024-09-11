@@ -109,7 +109,7 @@ public class JsonToSolrDocParser {
             while (!parser.isClosed()) {
                 JsonToken token = parser.nextToken();
                 if (token == JsonToken.FIELD_NAME) {
-                    currentField = parser.getCurrentName();
+                    currentField = parser.currentName();
                 } else if ("docs".equals(currentField) && token == JsonToken.START_ARRAY) {
                     // Start processing documents array
                     token = parser.nextToken();
@@ -134,7 +134,7 @@ public class JsonToSolrDocParser {
         while (parser.nextToken() != JsonToken.END_OBJECT) {
             JsonToken token = parser.currentToken();
             if (token == JsonToken.FIELD_NAME) {
-                fieldName = parser.getCurrentName();
+                fieldName = parser.currentName();
             } else if (token == JsonToken.VALUE_STRING) {
                 solrDoc.addField(fieldName, parser.getValueAsString());
             } else if (token == JsonToken.VALUE_NUMBER_INT) {
