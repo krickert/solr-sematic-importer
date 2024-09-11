@@ -136,6 +136,7 @@
             <groupId>io.micronaut.grpc</groupId>
             <artifactId>micronaut-grpc-client-runtime</artifactId>
         </dependency>
+        <!-- https://mvnrepository.com/artifact/org.apache.solr/solr-solrj -->
         <dependency>
             <groupId>org.apache.solr</groupId>
             <artifactId>solr-solrj</artifactId>
@@ -255,6 +256,7 @@
             <groupId>org.eclipse.jetty</groupId>
             <artifactId>jetty-client</artifactId>
         </dependency>
+
     </dependencies>
     <build>
         <plugins>

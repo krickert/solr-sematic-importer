@@ -4,16 +4,17 @@ import com.krickert.search.indexer.dto.SolrDocumentType;
 import com.krickert.search.indexer.tracker.IndexingTracker;
 import io.micronaut.core.util.CollectionUtils;
 import io.micronaut.retry.annotation.Retryable;
+import jakarta.annotation.PreDestroy;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
-import org.apache.solr.client.solrj.SolrServerException;
-import org.apache.solr.client.solrj.impl.ConcurrentUpdateHttp2SolrClient;
-import org.apache.solr.common.SolrInputDocument;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.apache.solr.client.solrj.impl.ConcurrentUpdateHttp2SolrClient;
+import org.apache.solr.client.solrj.SolrServerException;
+import org.apache.solr.common.SolrInputDocument;
+
 
 import java.io.IOException;
-import java.util.Collection;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -75,6 +76,7 @@ public class SolrInputDocumentQueue {
         }
     }
 
+    @PreDestroy
     public void close() {
         try {
             solrClient.close();
