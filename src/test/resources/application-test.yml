@@ -37,7 +37,10 @@ solr-config:
     connection:
       url: http://localhost:8983/solr
       authentication:
-        enabled: false
+        enabled: true
+        type: basic
+        user-name: dummy_user
+        password: dummy_password
       pagination-size: 100
   destination:
     version: 9.6.1
@@ -59,6 +62,8 @@ solr-config:
         issuer: https://my-token-url.com/oauth2/some-token/v1/token
         issuerAuthId: issuer-auth-id
         subject: your-subject
+        scope: solr # scope requested for oauth
+        require-dpop: true # true if we are to include dpop proof to the server
 
 vector-config:
   title:

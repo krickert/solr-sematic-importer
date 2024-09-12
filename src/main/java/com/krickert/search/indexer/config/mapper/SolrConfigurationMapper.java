@@ -56,15 +56,43 @@ public class SolrConfigurationMapper {
 
     private static Authentication toProtobuf(SolrConfiguration.Connection.Authentication auth) {
         Authentication.Builder builder = Authentication.newBuilder()
-                .setEnabled(auth.isEnabled())
-                .setType(auth.getType() != null ? auth.getType() : "")
-                .setClientSecret(auth.getClientSecret() != null ? auth.getClientSecret() : "")
+                .setEnabled(auth.isEnabled());
+        if (auth.getType() == null) {
+            return builder.build();
+        }
+        builder.setType(auth.getType());
+        switch (auth.getType()) {
+            case "basic", "BASIC":
+                addBasicAuthorization(auth, builder);
+                break;
+            case "oauth", "OAUTH", "jwt", "JWT":
+                addOauthAuthorization(auth, builder);
+                break;
+            case "basic_oauth", "oauth_basic", "BASIC_OAUTH",
+                 "OAUTH_BASIC", "basic_jwt", "oauth_jwt",
+                 "BASIC_JWT", "JWT_BASIC" :
+                addBasicAuthorization(auth, builder);
+                addOauthAuthorization(auth, builder);
+                break;
+            default:
+                break;
+        }
+        return builder.build();
+    }
+
+    private static void addOauthAuthorization(SolrConfiguration.Connection.Authentication auth, Authentication.Builder builder) {
+        builder.setClientSecret(auth.getClientSecret() != null ? auth.getClientSecret() : "")
                 .setClientId(auth.getClientId() != null ? auth.getClientId() : "")
                 .setIssuer(auth.getIssuer() != null ? auth.getIssuer() : "")
                 .setIssuerAuthId(auth.getIssuerAuthId() != null ? auth.getIssuerAuthId() : "")
-                .setSubject(auth.getSubject() != null ? auth.getSubject() : "");
+                .setSubject(auth.getSubject() != null ? auth.getSubject() : "")
+                .setScope(auth.getScope() != null ? auth.getScope() : "")
+                .setRequireDpop(auth.isRequireDpop());
+    }
 
-        return builder.build();
+    private static void addBasicAuthorization(SolrConfiguration.Connection.Authentication auth, Authentication.Builder builder) {
+        builder.setUserName(auth.getUserName() != null ? auth.getUserName() : "")
+                .setPassword(auth.getPassword() != null ? auth.getPassword() : "");
     }
 
     public static Map<String, SolrConfiguration> fromProtobuf(SolrConfigurationMap protoMap) {
@@ -112,6 +140,10 @@ public class SolrConfigurationMapper {
         auth.setIssuer(proto.getIssuer().isEmpty() ? null : proto.getIssuer());
         auth.setIssuerAuthId(proto.getIssuerAuthId().isEmpty() ? null : proto.getIssuerAuthId());
         auth.setSubject(proto.getSubject().isEmpty() ? null : proto.getSubject());
+        auth.setUserName(proto.getUserName().isEmpty() ? null : proto.getUserName());
+        auth.setPassword(proto.getPassword().isEmpty() ? null : proto.getPassword());
+        auth.setScope(proto.getScope().isEmpty() ? null : proto.getScope());
+        auth.setRequireDpop(proto.getRequireDpop());
         return auth;
     }
 }

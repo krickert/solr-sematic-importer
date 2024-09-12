@@ -46,6 +46,9 @@ solr-config:
       url: http://localhost:8980/solr
       authentication:
         enabled: false
+        type: basic
+        user_name: dummy_user
+        password: dummy_password
   destination:
     version: 9.6.1
     collection: destination_collection

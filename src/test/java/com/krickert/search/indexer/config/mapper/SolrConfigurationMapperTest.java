@@ -34,8 +34,11 @@ class SolrConfigurationMapperTest {
         assertEquals(sourceConfig.getVersion(), sourceProto.getVersion());
         assertEquals(sourceConfig.getCollection(), sourceProto.getCollection());
         assertEquals(sourceConfig.getConnection().getUrl(), sourceProto.getConnection().getUrl());
-        assertFalse(sourceProto.getConnection().getAuthentication().getEnabled());
-
+        Authentication so = sourceProto.getConnection().getAuthentication();
+        assertTrue(so.getEnabled());
+        assertEquals("basic", so.getType());
+        assertEquals("dummy_user", so.getUserName());
+        assertEquals("dummy_password", so.getPassword());
         // Validate destination configuration
         SolrConfig destinationProto = protoMap.getConfigsOrThrow("destination");
         SolrConfiguration destinationConfig = configs.get("destination");
@@ -72,7 +75,10 @@ class SolrConfigurationMapperTest {
         assertEquals(originalSourceConfig.getVersion(), sourceConfig.getVersion());
         assertEquals(originalSourceConfig.getCollection(), sourceConfig.getCollection());
         assertEquals(originalSourceConfig.getConnection().getUrl(), sourceConfig.getConnection().getUrl());
-        assertFalse(sourceConfig.getConnection().getAuthentication().isEnabled());
+        assertEquals(originalSourceConfig.getConnection().getAuthentication().isEnabled(), sourceConfig.getConnection().getAuthentication().isEnabled());
+        assertEquals(originalSourceConfig.getConnection().getAuthentication().getUserName(), sourceConfig.getConnection().getAuthentication().getUserName());
+        assertEquals(originalSourceConfig.getConnection().getAuthentication().getPassword(), sourceConfig.getConnection().getAuthentication().getPassword());
+        assertEquals(originalSourceConfig.getConnection().getAuthentication().getType(), sourceConfig.getConnection().getAuthentication().getType());
 
         // Validate destination configuration
         SolrConfiguration destinationConfig = configMap.get("destination");
@@ -179,7 +185,8 @@ class SolrConfigurationMapperTest {
         result &= logComparison("Issuer", config.getIssuer(), proto.getIssuer().isEmpty() ? null : proto.getIssuer());
         result &= logComparison("IssuerAuthId", config.getIssuerAuthId(), proto.getIssuerAuthId().isEmpty() ? null : proto.getIssuerAuthId());
         result &= logComparison("Subject", config.getSubject(), proto.getSubject().isEmpty() ? null : proto.getSubject());
-
+        result &= logComparison("UserName", config.getUserName(), proto.getUserName().isEmpty() ? null : proto.getUserName());
+        result &= logComparison("Password", config.getPassword(), proto.getPassword().isEmpty() ? null : proto.getPassword());
         return result;
     }
 

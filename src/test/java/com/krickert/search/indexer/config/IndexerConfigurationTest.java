@@ -47,7 +47,10 @@ public class IndexerConfigurationTest {
         assertNotNull(sourceConnection);
         testConnectionString(sourceConnection);
         assertNotNull(sourceConnection.getAuthentication());
-        assertFalse(sourceConnection.getAuthentication().isEnabled());
+        assertTrue(sourceConnection.getAuthentication().isEnabled());
+        assertEquals("basic", sourceConnection.getAuthentication().getType());
+        assertEquals("dummy_user", sourceConnection.getAuthentication().getUserName());
+        assertEquals("dummy_password", sourceConnection.getAuthentication().getPassword());
         assertNull(sourceConnection.getQueueSize());
         assertNull(sourceConnection.getThreadCount());
         SolrConfiguration destConfig = indexerConfiguration.getDestinationSolrConfiguration();

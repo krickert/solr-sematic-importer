@@ -1,5 +1,7 @@
 package com.krickert.search.indexer.solr.client;
 
+import com.krickert.search.indexer.config.IndexerConfiguration;
+import com.krickert.search.indexer.config.SolrConfiguration;
 import com.nimbusds.jose.JOSEObjectType;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.JWSHeader;
@@ -10,11 +12,13 @@ import com.nimbusds.jose.jwk.JWK;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
 import io.micronaut.context.annotation.Requires;
-import io.micronaut.context.annotation.Value;
 import io.micronaut.context.env.Environment;
+import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 import okhttp3.*;
 import org.json.JSONObject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -29,25 +33,59 @@ import java.util.concurrent.locks.ReentrantLock;
 @Singleton
 @Requires(notEnv = Environment.TEST)
 public class OktaAuthImpl implements OktaAuth {
+    private static final Logger log = LoggerFactory.getLogger(OktaAuthImpl.class);
+
+    private final boolean enabled;
     private final String clientSecret;
     private final String clientId;
     private final String tokenEndpoint;
+    private final String scope;
+    private final boolean dpopRequired;
 
     private volatile String cachedToken;
     private volatile long tokenExpirationTime;
     private final ReentrantLock lock = new ReentrantLock();
 
-    public OktaAuthImpl(
-            @Value("${solr-config.destination.connection.authentication.client-secret}") String clientSecret,
-            @Value("${solr-config.destination.connection.authentication.client-id}") String clientId,
-            @Value("${solr-config.destination.connection.authentication.issuer}") String tokenEndpoint) {
-        this.clientSecret = clientSecret;
-        this.clientId = clientId;
-        this.tokenEndpoint = tokenEndpoint;
+    @Inject
+    public OktaAuthImpl(IndexerConfiguration indexerConfiguration) {
+        SolrConfiguration.Connection.Authentication authentication = indexerConfiguration.getSourceSolrConfiguration().getConnection().getAuthentication();
+        if (oAuthEnabled(authentication)) {
+            assert authentication.getClientSecret() != null;
+            assert authentication.getClientId() != null;
+            assert authentication.getIssuer() != null;
+            assert authentication.getScope() != null;
+
+            this.clientSecret = authentication.getClientSecret();
+            this.clientId = authentication.getClientId();
+            this.tokenEndpoint = authentication.getIssuer();
+            this.scope = authentication.getScope();
+            this.enabled = true;
+            this.dpopRequired = authentication.isRequireDpop();
+            log.info("Okta authentication enabled");
+        } else {
+            this.enabled = false;
+            this.clientSecret = null;
+            this.clientId = null;
+            this.tokenEndpoint = null;
+            this.scope = null;
+            this.dpopRequired = false;
+            log.info("connection destination did not include oauth");
+        }
+    }
+
+
+    private static boolean oAuthEnabled(SolrConfiguration.Connection.Authentication authentication) {
+        return authentication != null &&
+                authentication.isEnabled() &&
+                authentication.getType() != null &&
+                (authentication.getType().contains("oauth") || authentication.getType().equals("jwt"));
     }
 
     @Override
     public String getAccessToken() throws IOException {
+        if (!enabled) {
+            return null;
+        }
         // Use double-checked locking to minimize locking overhead
         if (cachedToken == null || System.currentTimeMillis() > tokenExpirationTime) {
             lock.lock();
@@ -68,20 +106,10 @@ public class OktaAuthImpl implements OktaAuth {
         String credentials = clientId + ":" + clientSecret;
         String encodedCredentials = Base64.getEncoder().encodeToString(credentials.getBytes(StandardCharsets.UTF_8));
 
-        // Generate EC Key Pair (for DPoP)
-        KeyPair keyPair;
-        try {
-            KeyPairGenerator generator = KeyPairGenerator.getInstance("EC");
-            generator.initialize(Curve.P_256.toECParameterSpec());
-            keyPair = generator.generateKeyPair();
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
-
         // Step 1: Make an initial token request to get the nonce
         RequestBody formBody = new FormBody.Builder()
                 .add("grant_type", "client_credentials")
-                .add("scope", "solr")
+                .add("scope", scope)
                 .build();
 
         Request nonceRequest = new Request.Builder()
@@ -106,19 +134,13 @@ public class OktaAuthImpl implements OktaAuth {
             }
         }
 
-        // Step 2: Make the actual token request with the DPoP proof
-        String dpopProof;
-        try {
-            dpopProof = createDpopHeader(tokenEndpoint, "POST", keyPair, nonce);
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
-
-        Request request = new Request.Builder()
+        Request.Builder requestBuilder = new Request.Builder()
                 .url(tokenEndpoint)
-                .addHeader("Authorization", "Basic " + encodedCredentials)
-                .addHeader("DPoP", dpopProof)
-                .post(formBody)
+                .addHeader("Authorization", "Basic " + encodedCredentials);
+        if (this.dpopRequired) {
+            addDpopProofToHeader(nonce, requestBuilder);
+        }
+        Request request = requestBuilder.post(formBody)
                 .build();
 
         try (Response response = client.newCall(request).execute()) {
@@ -126,10 +148,31 @@ public class OktaAuthImpl implements OktaAuth {
                 String responseBody = response.body() != null ? response.body().string() : "No error body";
                 throw new IOException("Unexpected code " + response + " with body: " + responseBody);
             }
+            assert response.body() != null;
             String responseBody = response.body().string();
             JSONObject jsonObject = new JSONObject(responseBody);
             updateCachedToken(jsonObject.getString("access_token"), jsonObject.getInt("expires_in"));
         }
+    }
+
+    private void addDpopProofToHeader(String nonce, Request.Builder requestBuilder) {
+        // Step 2: Make the actual token request with the DPoP proof
+        // Generate EC Key Pair (for DPoP)
+        KeyPair keyPair;
+        try {
+            KeyPairGenerator generator = KeyPairGenerator.getInstance("EC");
+            generator.initialize(Curve.P_256.toECParameterSpec());
+            keyPair = generator.generateKeyPair();
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+        String dpopProof;
+        try {
+            dpopProof = createDpopHeader(tokenEndpoint, "POST", keyPair, nonce);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+        requestBuilder.addHeader("DPoP", dpopProof);
     }
 
     private void updateCachedToken(String token, int expiresIn) {

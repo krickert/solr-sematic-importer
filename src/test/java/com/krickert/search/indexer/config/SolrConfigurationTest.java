@@ -27,7 +27,10 @@ class SolrConfigurationTest {
         SolrConfiguration.Connection sourceConnection = source.getConnection();
         assertNotNull(sourceConnection);
         testConnectionString(sourceConnection);
-        assertFalse(sourceConnection.getAuthentication().isEnabled());
+        assertTrue(sourceConnection.getAuthentication().isEnabled());
+        assertEquals("dummy_user", sourceConnection.getAuthentication().getUserName());
+        assertEquals("dummy_password", sourceConnection.getAuthentication().getPassword());
+        assertEquals("basic", sourceConnection.getAuthentication().getType());
     }
 
     @Test
@@ -62,5 +65,7 @@ class SolrConfigurationTest {
         assertEquals("https://my-token-url.com/oauth2/some-token/v1/token", auth.getIssuer());
         assertEquals("issuer-auth-id", auth.getIssuerAuthId());
         assertEquals("your-subject", auth.getSubject());
+        assertTrue(auth.isRequireDpop());
+        assertEquals("solr", auth.getScope());
     }
 }

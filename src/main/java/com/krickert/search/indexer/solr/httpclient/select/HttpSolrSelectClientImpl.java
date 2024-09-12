@@ -2,6 +2,8 @@ package com.krickert.search.indexer.solr.httpclient.select;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.krickert.search.indexer.config.IndexerConfiguration;
+import com.krickert.search.indexer.config.SolrConfiguration;
 import io.micronaut.context.annotation.Value;
 import io.micronaut.http.HttpRequest;
 import io.micronaut.http.client.HttpClient;
@@ -17,6 +19,7 @@ import java.net.URI;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 
+import static com.google.common.base.Preconditions.checkNotNull;
 
 @Singleton
 public class HttpSolrSelectClientImpl implements HttpSolrSelectClient {
@@ -25,16 +28,20 @@ public class HttpSolrSelectClientImpl implements HttpSolrSelectClient {
     private final HttpClient httpClient;
     private final String solrHost;
     private final String solrCollection;
+    private final SolrConfiguration sourceSolrConfiguration;
     private final ObjectMapper objectMapper;
 
     @Inject
     public HttpSolrSelectClientImpl(@Client HttpClient httpClient,
+                                    IndexerConfiguration configuration,
                                     @Value("${solr-config.source.connection.url}") String solrHost,
                                     @Value("${solr-config.source.collection}") String solrCollection) {
         log.info("Creating Http-based solr client");
-        this.httpClient = httpClient;
-        this.solrHost = solrHost;
-        this.solrCollection = solrCollection;
+        this.httpClient = checkNotNull(httpClient);
+        this.solrHost = checkNotNull(solrHost);
+        this.solrCollection = checkNotNull(solrCollection);
+        checkNotNull(configuration);
+        this.sourceSolrConfiguration = configuration.getSourceSolrConfiguration();
         this.objectMapper = new ObjectMapper();
         log.info("Created Http-based solr client");
     }
@@ -60,8 +67,22 @@ public class HttpSolrSelectClientImpl implements HttpSolrSelectClient {
     }
 
     private String getResponseAsString(URI uri) throws ExecutionException, InterruptedException {
-        Future<String> futureResponse = Single.fromPublisher(httpClient.retrieve(HttpRequest.GET(uri), String.class))
-                .toFuture();
+        HttpRequest<?> request = HttpRequest.GET(uri);
+
+        // If authentication is enabled, enhance the request with the basic auth header
+        if (sourceSolrConfiguration.getConnection().getAuthentication() != null &&
+                sourceSolrConfiguration.getConnection().getAuthentication().isEnabled()) {
+            SolrConfiguration.Connection.Authentication authentication = sourceSolrConfiguration.getConnection().getAuthentication();
+            if ("basic".equalsIgnoreCase(authentication.getType())) {
+                request = HttpRequest.GET(uri)
+                        .basicAuth(authentication.getUserName(), authentication.getPassword());
+            } else {
+                log.warn("Source authentication type '{}' is not supported. Skipping authentication for Solr request to {}",
+                        authentication.getType(), sourceSolrConfiguration.getConnection().getUrl());
+            }
+        }
+
+        Future<String> futureResponse = Single.fromPublisher(httpClient.retrieve(request, String.class)).toFuture();
         return futureResponse.get();
     }
 

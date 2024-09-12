@@ -240,6 +240,18 @@ public class SolrConfiguration {
             @JsonProperty("subject")
             private String subject;
 
+            @JsonProperty("user_name")
+            private String userName;
+
+            @JsonProperty("password")
+            private String password;
+
+            @JsonProperty("scope")
+            private String scope;
+
+            @JsonProperty("require_dpop")
+            private boolean requireDpop = false;
+
             public boolean isEnabled() {
                 return enabled;
             }
@@ -296,6 +308,38 @@ public class SolrConfiguration {
                 this.subject = subject;
             }
 
+            public String getUserName() {
+                return userName;
+            }
+
+            public void setUserName(String userName) {
+                this.userName = userName;
+            }
+
+            public String getPassword() {
+                return password;
+            }
+
+            public void setPassword(String password) {
+                this.password = password;
+            }
+
+            public String getScope() {
+                return scope;
+            }
+
+            public void setScope(String scope) {
+                this.scope = scope;
+            }
+
+            public boolean isRequireDpop() {
+                return requireDpop;
+            }
+
+            public void setRequireDpop(boolean requireDpop) {
+                this.requireDpop = requireDpop;
+            }
+
             @Override
             public String toString() {
                 return MoreObjects.toStringHelper(this)
@@ -306,6 +350,10 @@ public class SolrConfiguration {
                         .add("issuer", issuer)
                         .add("issuerAuthId", issuerAuthId)
                         .add("subject", subject)
+                        .add("userName", userName)
+                        .add("password", password)
+                        .add("scope", scope)
+                        .add("requireDpop", requireDpop)
                         .toString();
             }
         }
