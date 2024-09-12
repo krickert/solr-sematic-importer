@@ -115,8 +115,15 @@ public class SolrVectorIndexingService {
             return;
         }
 
-        String vectorFieldName = indexerConfiguration.getVectorConfig().get(fieldName).getChunkFieldVectorName();
-        EmbeddingsVectorReply embeddingsVectorReply = getEmbeddingsVectorReply(fieldData);
+        VectorConfig vectorConfig = indexerConfiguration.getVectorConfig().get(fieldName);
+        final String finalFieldData;
+        if (vectorConfig.getMaxChars() > 0 && fieldData.length() > vectorConfig.getMaxChars()) {
+            finalFieldData = StringUtils.truncate(fieldData, vectorConfig.getMaxChars());
+        } else {
+            finalFieldData = fieldData;
+        }
+        String vectorFieldName = vectorConfig.getChunkFieldVectorName();
+        EmbeddingsVectorReply embeddingsVectorReply = getEmbeddingsVectorReply(finalFieldData);
         solrInputDocument.addField(vectorFieldName, embeddingsVectorReply.getEmbeddingsList());
     }
 

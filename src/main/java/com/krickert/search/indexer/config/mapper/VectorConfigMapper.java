@@ -19,7 +19,9 @@ public class VectorConfigMapper {
             javaConfig.setChunkSize(protoConfig.getChunkOptions().getLength());
         }
 
+
         javaConfig.setChunkField(protoConfig.getChunkField());
+        javaConfig.setMaxChars(protoConfig.getMaxChars());
 
         if (protoConfig.hasEmbeddingModel()) {
             javaConfig.setModel(protoConfig.getEmbeddingModel().getEmbeddingModel());
@@ -61,6 +63,10 @@ public class VectorConfigMapper {
         }
 
         protoBuilder.setChunkField(javaConfig.getChunkField());
+
+        if (javaConfig.getMaxChars() != null) {
+            protoBuilder.setMaxChars(javaConfig.getMaxChars());
+        }
 
         if (javaConfig.getModel() != null) {
             DocumentEmbeddingModel embeddingModel = DocumentEmbeddingModel.newBuilder()

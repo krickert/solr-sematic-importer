@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.krickert.search.indexer.config.IndexerConfiguration;
 import com.krickert.search.indexer.config.SolrConfiguration;
 import io.micronaut.context.annotation.Value;
+import io.micronaut.core.util.CollectionUtils;
 import io.micronaut.http.HttpRequest;
 import io.micronaut.http.client.HttpClient;
 import io.micronaut.http.client.annotation.Client;
@@ -16,6 +17,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.net.URI;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 
@@ -29,19 +32,26 @@ public class HttpSolrSelectClientImpl implements HttpSolrSelectClient {
     private final String solrHost;
     private final String solrCollection;
     private final SolrConfiguration sourceSolrConfiguration;
+    private final Collection<String> filters;
     private final ObjectMapper objectMapper;
 
     @Inject
     public HttpSolrSelectClientImpl(@Client HttpClient httpClient,
-                                    IndexerConfiguration configuration,
-                                    @Value("${solr-config.source.connection.url}") String solrHost,
-                                    @Value("${solr-config.source.collection}") String solrCollection) {
+                                    IndexerConfiguration configuration) {
         log.info("Creating Http-based solr client");
         this.httpClient = checkNotNull(httpClient);
-        this.solrHost = checkNotNull(solrHost);
-        this.solrCollection = checkNotNull(solrCollection);
         checkNotNull(configuration);
-        this.sourceSolrConfiguration = configuration.getSourceSolrConfiguration();
+        this.sourceSolrConfiguration = checkNotNull(configuration.getSourceSolrConfiguration());
+        SolrConfiguration.Connection connection = checkNotNull(sourceSolrConfiguration.getConnection());
+        this.solrHost = checkNotNull(connection.getUrl());
+        this.solrCollection = checkNotNull(sourceSolrConfiguration.getCollection());
+        final Collection<String> filters;
+        if (CollectionUtils.isEmpty(sourceSolrConfiguration.getFilters())) {
+            filters = Collections.emptyList();
+        } else {
+            filters = sourceSolrConfiguration.getFilters();
+        }
+        this.filters = filters;
         this.objectMapper = new ObjectMapper();
         log.info("Created Http-based solr client");
     }
@@ -91,14 +101,17 @@ public class HttpSolrSelectClientImpl implements HttpSolrSelectClient {
     }
 
     private URI createSolrRequest(String solrHost, String solrCollection, Integer paginationSize, Integer pageNumber) {
-        return UriBuilder.of(solrHost)
+        UriBuilder builder = UriBuilder.of(solrHost)
                 .path(solrCollection)
                 .path("select")
                 .queryParam("q", "*:*")
                 .queryParam("wt", "json")
                 .queryParam("start", pageNumber * paginationSize)
-                .queryParam("rows", paginationSize)
-                .build();
+                .queryParam("rows", paginationSize);
+        for (String filter : filters) {
+            builder.queryParam("fq", filter);
+        }
+        return builder.build();
     }
 
     @Override

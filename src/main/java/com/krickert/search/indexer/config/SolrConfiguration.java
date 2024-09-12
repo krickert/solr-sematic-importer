@@ -8,6 +8,9 @@ import io.micronaut.context.annotation.EachProperty;
 import io.micronaut.context.annotation.Parameter;
 import io.micronaut.serde.annotation.Serdeable;
 
+import java.util.Collection;
+import java.util.Collections;
+
 @Serdeable
 @EachProperty("solr-config")
 @JsonInclude(JsonInclude.Include.NON_NULL)
@@ -21,6 +24,12 @@ public class SolrConfiguration {
 
     @JsonProperty("collection")
     private String collection;
+
+    @JsonProperty("filters")
+    private Collection<String> filters = Collections.emptyList();
+
+    @JsonProperty("start")
+    private Long start = 0L;
 
     @JsonProperty("collectionCreation")
     private SolrCollectionCreationConfig collectionCreation;
@@ -56,6 +65,21 @@ public class SolrConfiguration {
         this.collection = collection;
     }
 
+    public Collection<String> getFilters() {
+        return filters;
+    }
+
+    public void setFilters(Collection<String> filters) {
+        this.filters = filters;
+    }
+
+    public Long getStart() {
+        return start;
+    }
+
+    public void setStart(Long start) {
+        this.start = start;
+    }
     public SolrCollectionCreationConfig getCollectionCreation() {
         return collectionCreation;
     }
@@ -78,6 +102,8 @@ public class SolrConfiguration {
                 .add("name", name)
                 .add("version", version)
                 .add("collection", collection)
+                .add("filters", filters)
+                .add("start", start)
                 .add("collectionCreation", collectionCreation)
                 .add("connection", connection)
                 .toString();

@@ -34,6 +34,10 @@ solr-config:
   source:
     version: 7.7.3
     collection: source_collection
+    filters: #these filters are added each as an "fq" query for solr.
+      - "-id:*.csv" #ignore csv
+      - "department:hr"
+    start: 0 #row number to start, a 0 or negative number will start at the top.
     connection:
       url: http://localhost:8983/solr
       authentication:
@@ -68,7 +72,8 @@ solr-config:
 vector-config:
   title:
     chunk-field: false
-    model: mini-LM
+    max-chars: 2000 #defaults to 0 - 0 or negative has the whole thing
+    model: mini-LM #feature in progress and will be done soon for the vectorizer
     chunk-field-vector-name: title-vector
     similarity-function: cosine #cosine, dot_product, or euclidean.  Defaults to dot_product
     hnsw-max-connections: 16 #if not filled out, this will default to 16

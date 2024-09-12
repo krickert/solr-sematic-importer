@@ -25,6 +25,7 @@ public class VectorConfigTest {
         assertFalse(titleConfig.getChunkField());
         assertNull(titleConfig.getChunkOverlap());
         assertNull(titleConfig.getChunkSize());
+        assertEquals(2000, titleConfig.getMaxChars());
         assertEquals("mini-LM", titleConfig.getModel());
         assertFalse(titleConfig.getChunkField());
         VectorConfig bodyConfig = vectorConfigMap.get("body");

@@ -23,6 +23,9 @@ public class VectorConfig {
     @JsonProperty("chunk-field")
     private Boolean chunkField;
 
+    @JsonProperty("max-chars")
+    private Integer maxChars;
+
     @JsonProperty("model")
     private String model;
 
@@ -69,6 +72,14 @@ public class VectorConfig {
 
     public void setChunkField(Boolean chunkField) {
         this.chunkField = chunkField;
+    }
+
+    public Integer getMaxChars() {
+        return maxChars;
+    }
+
+    public void setMaxChars(Integer maxChars) {
+        this.maxChars = maxChars;
     }
 
     public String getModel() {
@@ -141,6 +152,7 @@ public class VectorConfig {
                 .add("chunkOverlap", chunkOverlap)
                 .add("chunkSize", chunkSize)
                 .add("chunkField", chunkField)
+                .add("maxChars", maxChars)
                 .add("model", model)
                 .add("destinationCollection", destinationCollection)
                 .add("chunkFieldVectorName", chunkFieldVectorName)

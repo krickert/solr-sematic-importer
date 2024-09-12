@@ -7,7 +7,9 @@ import jakarta.inject.Inject;
 import org.junit.jupiter.api.Test;
 
 import java.util.Map;
+import java.util.Set;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -134,6 +136,9 @@ class SolrConfigurationMapperTest {
         result &= logComparison("Name", config.getName(), proto.getName());
         result &= logComparison("Version", config.getVersion(), proto.getVersion());
         result &= logComparison("Collection", config.getCollection(), proto.getCollection());
+        result &= compareListValues(config.getFilters(), proto.getFiltersList().stream().toList());
+        result &= logComparison("start", config.getStart(), proto.getStart());
+
 
         result &= areEquivalent(config.getCollectionCreation(), proto.hasCollectionCreation() ? proto.getCollectionCreation() : null);
         result &= areEquivalent(config.getConnection(), proto.getConnection());
@@ -258,6 +263,20 @@ class SolrConfigurationMapperTest {
         boolean isEqual = (originalValue == null && convertedValue == null) || (originalValue != null && originalValue.equals(convertedValue));
         if (!isEqual) {
             LOGGER.warning("Mismatch in field '" + fieldName + "': original=" + originalValue + ", converted=" + convertedValue);
+        }
+        return isEqual;
+    }
+
+    private boolean compareListValues(java.util.Collection<String> originalList, java.util.Collection<String> protoList) {
+        if (originalList == null && protoList == null) return true;
+        if (originalList == null || protoList == null) return false;
+
+        Set<String> originalSet = originalList.stream().collect(Collectors.toSet());
+        Set<String> protoSet = protoList.stream().collect(Collectors.toSet());
+
+        boolean isEqual = originalSet.equals(protoSet);
+        if (!isEqual) {
+            LOGGER.warning("List values do not match: original=" + originalSet + ", converted=" + protoSet);
         }
         return isEqual;
     }

@@ -4,6 +4,7 @@ import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
 import jakarta.inject.Inject;
 import org.junit.jupiter.api.Test;
 
+import java.util.Collection;
 import java.util.Map;
 
 import static com.krickert.search.indexer.config.ConfigTestHelpers.testConnectionString;
@@ -23,7 +24,12 @@ class SolrConfigurationTest {
         SolrConfiguration source = configs.get("source");
         assertEquals("7.7.3", source.getVersion());
         assertEquals("source_collection", source.getCollection());
-
+        Collection<String> filters = source.getFilters();
+        assertNotNull(filters);
+        assertEquals(2, filters.size());
+        assertTrue(filters.contains("-id:*.csv"));
+        assertTrue(filters.contains("department:hr"));
+        assertEquals(0, source.getStart());
         SolrConfiguration.Connection sourceConnection = source.getConnection();
         assertNotNull(sourceConnection);
         testConnectionString(sourceConnection);

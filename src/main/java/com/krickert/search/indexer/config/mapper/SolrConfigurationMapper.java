@@ -20,6 +20,13 @@ public class SolrConfigurationMapper {
                 .setCollection(config.getCollection() != null ? config.getCollection() : "")
                 .setConnection(toProtobuf(config.getConnection()));
 
+        if (config.getStart() != null) {
+            builder.setStart(config.getStart());
+        }
+        if (config.getFilters() != null) {
+            builder.addAllFilters(config.getFilters());
+        }
+
         if (config.getCollectionCreation() != null) {
             builder.setCollectionCreation(toProtobuf(config.getCollectionCreation()));
         }
