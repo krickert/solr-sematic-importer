@@ -28,7 +28,7 @@ class SolrConfigurationTest {
         assertNotNull(filters);
         assertEquals(2, filters.size());
         assertTrue(filters.contains("-id:*.csv"));
-        assertTrue(filters.contains("department:hr"));
+        assertTrue(filters.contains("title:*"));
         assertEquals(0, source.getStart());
         SolrConfiguration.Connection sourceConnection = source.getConnection();
         assertNotNull(sourceConnection);

@@ -1,5 +1,6 @@
 package com.krickert.search.indexer.controller;
 
+import com.krickert.search.indexer.SemanticIndexer;
 import com.krickert.search.indexer.config.IndexerConfiguration;
 import com.krickert.search.indexer.dto.IndexingStatus;
 import com.krickert.search.indexer.service.HealthService;
@@ -21,11 +22,13 @@ public class IndexerController {
 
     private final IndexerService indexerService;
     private final HealthService healthService;
+    private final SemanticIndexer semanticIndexer;
 
     @Inject
-    public IndexerController(IndexerService indexerService, HealthService healthService) {
+    public IndexerController(IndexerService indexerService, HealthService healthService, SemanticIndexer semanticIndexer) {
         this.indexerService = indexerService;
         this.healthService = healthService;
+        this.semanticIndexer = semanticIndexer;
     }
 
     @Post("/start")
@@ -42,13 +45,21 @@ public class IndexerController {
     @Get("/start")
     @Secured(SecurityRule.IS_ANONYMOUS)
     public HttpResponse<String> startIndexing(@QueryValue Optional<String> configName) {
-        String result;
         if (configName.isPresent() && !configName.get().isEmpty()) {
-            result = indexerService.startIndexingByName(configName.get());
-        } else {
-            return HttpResponse.badRequest("Configuration name is required");
+            String config = configName.get();
+            if ("default".equals(config)) {
+                semanticIndexer.runDefaultExportJob();
+                return HttpResponse.ok("Indexing job started");
+            }
+            String result = indexerService.startIndexingByName(config);
+            return createResponseBasedOnResult(result);
         }
 
+        semanticIndexer.runDefaultExportJob();
+        return HttpResponse.ok("Indexing job started");
+    }
+
+    private HttpResponse<String> createResponseBasedOnResult(String result) {
         if (result.startsWith("Indexing job started")) {
             return HttpResponse.ok(result);
         } else {
