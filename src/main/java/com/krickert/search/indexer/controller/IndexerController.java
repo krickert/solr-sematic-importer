@@ -17,6 +17,8 @@ import io.micronaut.security.rules.SecurityRule;
 import jakarta.inject.Inject;
 
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 
 @Controller("/indexer")
 public class IndexerController {
@@ -45,17 +47,17 @@ public class IndexerController {
 
     @Get("/start")
     @Secured(SecurityRule.IS_ANONYMOUS)
-    public HttpResponse<String> startIndexing(@QueryValue Optional<String> configName) {
-        return startIndexingAsync(configName.or(() -> Optional.of("default")));
+    public CompletionStage<HttpResponse<String>> startIndexing(@QueryValue Optional<String> configName) {
+        return CompletableFuture.supplyAsync(() -> startIndexingAsync(configName.or(() -> Optional.of("default"))));
     }
 
-    @Async
     private HttpResponse<String> startIndexingAsync(Optional<String> configName) {
         String config = configName.orElse("default");
         if ("default".equals(config)) {
             semanticIndexer.runDefaultExportJob();
             return HttpResponse.ok("Indexing job started");
         }
+
         String result = indexerService.startIndexingByName(config);
         return createResponseBasedOnResult(result);
     }
