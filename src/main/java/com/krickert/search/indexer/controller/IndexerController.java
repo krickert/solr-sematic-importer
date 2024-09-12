@@ -11,6 +11,7 @@ import io.micronaut.http.annotation.Controller;
 import io.micronaut.http.annotation.Get;
 import io.micronaut.http.annotation.Post;
 import io.micronaut.http.annotation.QueryValue;
+import io.micronaut.scheduling.annotation.Async;
 import io.micronaut.security.annotation.Secured;
 import io.micronaut.security.rules.SecurityRule;
 import jakarta.inject.Inject;
@@ -45,18 +46,18 @@ public class IndexerController {
     @Get("/start")
     @Secured(SecurityRule.IS_ANONYMOUS)
     public HttpResponse<String> startIndexing(@QueryValue Optional<String> configName) {
-        if (configName.isPresent() && !configName.get().isEmpty()) {
-            String config = configName.get();
-            if ("default".equals(config)) {
-                semanticIndexer.runDefaultExportJob();
-                return HttpResponse.ok("Indexing job started");
-            }
-            String result = indexerService.startIndexingByName(config);
-            return createResponseBasedOnResult(result);
-        }
+        return startIndexingAsync(configName.or(() -> Optional.of("default")));
+    }
 
-        semanticIndexer.runDefaultExportJob();
-        return HttpResponse.ok("Indexing job started");
+    @Async
+    private HttpResponse<String> startIndexingAsync(Optional<String> configName) {
+        String config = configName.orElse("default");
+        if ("default".equals(config)) {
+            semanticIndexer.runDefaultExportJob();
+            return HttpResponse.ok("Indexing job started");
+        }
+        String result = indexerService.startIndexingByName(config);
+        return createResponseBasedOnResult(result);
     }
 
     private HttpResponse<String> createResponseBasedOnResult(String result) {

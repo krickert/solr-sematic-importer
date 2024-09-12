@@ -10,6 +10,7 @@ import com.krickert.search.indexer.solr.index.SolrInputDocumentQueue;
 import com.krickert.search.indexer.solr.vector.SolrDestinationCollectionValidationService;
 import com.krickert.search.indexer.solr.vector.SolrVectorIndexingService;
 import com.krickert.search.indexer.tracker.IndexingTracker;
+import io.micronaut.scheduling.annotation.Async;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 import org.apache.solr.common.SolrInputDocument;
