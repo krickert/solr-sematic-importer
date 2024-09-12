@@ -36,7 +36,7 @@ solr-config:
     collection: source_collection
     filters: #these filters are added each as an "fq" query for solr.
       - "-id:*.csv" #ignore csv
-      - "department:hr"
+      - "title:*" #only documents with titles
     start: 0 #row number to start, a 0 or negative number will start at the top.
     connection:
       url: http://localhost:8983/solr
