@@ -25,11 +25,8 @@ public class ChunkDocumentListener implements DocumentListener {
     private final ChunkServiceGrpc.ChunkServiceBlockingStub chunkServiceBlockingStub;
     private final EmbeddingServiceGrpc.EmbeddingServiceBlockingStub embeddingServiceBlockingStub;
     private final SolrInputDocumentQueue solrInputDocumentQueue;
-    private final String parentDestinationCollection;
     private final IndexingTracker indexingTracker;
 
-    private String mainTaskId;
-    private String sideTaskId;
 
     public ChunkDocumentListener(IndexerConfiguration indexerConfiguration,
                                  @Named("chunkService") ChunkServiceGrpc.ChunkServiceBlockingStub chunkServiceBlockingStub,
@@ -40,14 +37,9 @@ public class ChunkDocumentListener implements DocumentListener {
         this.chunkServiceBlockingStub = chunkServiceBlockingStub;
         this.embeddingServiceBlockingStub = embeddingServiceBlockingStub;
         this.solrInputDocumentQueue = solrInputDocumentQueue;
-        this.parentDestinationCollection = indexerConfiguration.getDestinationSolrConfiguration().getCollection();
         this.indexingTracker = indexingTracker;
     }
 
-    public void setTaskIds(String mainTaskId) {
-        this.mainTaskId = mainTaskId;
-        this.sideTaskId = mainTaskId + "-vector";
-    }
 
     @Override
     public void processDocument(SolrInputDocument document) {
