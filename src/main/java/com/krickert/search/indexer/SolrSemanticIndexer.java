@@ -82,6 +82,8 @@ public class SolrSemanticIndexer implements SemanticIndexer {
 
         long totalExpected = httpSolrSelectClient.getTotalNumberOfDocumentsForCollection(solr7Host, solrSourceCollection);
         assert totalExpected >= 0;
+        log.info("We queried host {} with collection {} and it returned {} documents. We will start tracking this crawl", solr7Host, solrSourceCollection, totalExpected);
+        indexingTracker.reset();
         indexingTracker.startTracking(crawlId.toString());
         indexingTracker.setTotalDocumentsFound(totalExpected);
         long numOfPagesExpected = calculateNumOfPages(totalExpected, paginationSize);
@@ -96,7 +98,7 @@ public class SolrSemanticIndexer implements SemanticIndexer {
         indexingTracker.finalizeTracking(IndexingTracker.TaskType.MAIN);
         waitForIndexingCompletion(VECTOR);
         indexingTracker.finalizeTracking(VECTOR);
-
+        solrAdminActions.commitVectorCollections();
         if (indexingTracker.getMainTaskStatus().getOverallStatus() == IndexingStatus.OverallStatus.FAILED) {
             String errorMessage = String.format("Indexing job %s failed.  End status: \n%s", crawlId, indexingTracker.getMainTaskStatus());
             log.error(errorMessage);

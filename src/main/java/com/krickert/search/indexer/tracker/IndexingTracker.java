@@ -43,7 +43,7 @@ public class IndexingTracker {
         return vectorTaskStatus;
     }
 
-    public void reset() {
+    public synchronized void reset() {
         resetStatus(mainTaskStatus);
         resetStatus(vectorTaskStatus);
 
@@ -70,7 +70,7 @@ public class IndexingTracker {
         status.setAverageDocsPerSecond(0);
     }
 
-    public void startTracking(String indexingId) {
+    public synchronized void startTracking(String indexingId) {
         timeStarted = LocalDateTime.now();
         initializeStatus(mainTaskStatus, indexingId);
         initializeStatus(vectorTaskStatus, indexingId);
@@ -83,12 +83,12 @@ public class IndexingTracker {
         status.setOverallStatus(IndexingStatus.OverallStatus.RUNNING);
     }
 
-    public void setTotalDocumentsFound(Long totalDocuments) {
+    public synchronized void setTotalDocumentsFound(Long totalDocuments) {
         mainDocumentsFound.set(totalDocuments);
         vectorDocumentsFound.set(totalDocuments);
     }
 
-    public void updateProgress() {
+    public synchronized void updateProgress() {
         updateProgress(TaskType.MAIN);
         updateProgress(TaskType.VECTOR);
     }
@@ -127,7 +127,7 @@ public class IndexingTracker {
         status.setAverageDocsPerSecond(avgDocsPerSecond);
     }
 
-    public void finalizeTracking(TaskType taskType) {
+    public synchronized void finalizeTracking(TaskType taskType) {
         switch (taskType) {
             case MAIN:
                 finalizeStatus(mainTaskStatus);
@@ -157,14 +157,14 @@ public class IndexingTracker {
         }
     }
 
-    private void recordHistory(IndexingStatus status) {
+    private synchronized void recordHistory(IndexingStatus status) {
         if (indexingHistory.size() >= maxHistorySize) {
             indexingHistory.remove(0);
         }
         indexingHistory.add(status.clone());
     }
 
-    public List<IndexingStatus> getHistory(int limit) {
+    public synchronized List<IndexingStatus> getHistory(int limit) {
         return indexingHistory.stream().limit(limit).collect(Collectors.toList());
     }
 
@@ -185,53 +185,59 @@ public class IndexingTracker {
     }
 
     private void documentProcessed(TaskType taskType) {
-        switch (taskType) {
-            case MAIN:
-                mainDocumentsProcessed.incrementAndGet();
-                break;
-            case VECTOR:
-                vectorDocumentsProcessed.incrementAndGet();
-                break;
-            default:
-                throw new IllegalArgumentException("Unknown task type: " + taskType);
+        synchronized (this) {
+            switch (taskType) {
+                case MAIN:
+                    mainDocumentsProcessed.incrementAndGet();
+                    break;
+                case VECTOR:
+                    vectorDocumentsProcessed.incrementAndGet();
+                    break;
+                default:
+                    throw new IllegalArgumentException("Unknown task type: " + taskType);
+            }
+            updateProgress(taskType);
+            checkIfFinished();
         }
-        updateProgress(taskType);
-        checkIfFinished();
     }
 
     private void documentFailed(TaskType taskType) {
-        switch (taskType) {
-            case MAIN:
-                mainDocumentsFailed.incrementAndGet();
-                break;
-            case VECTOR:
-                vectorDocumentsFailed.incrementAndGet();
-                break;
-            default:
-                throw new IllegalArgumentException("Unknown task type: " + taskType);
+        synchronized (this) {
+            switch (taskType) {
+                case MAIN:
+                    mainDocumentsFailed.incrementAndGet();
+                    break;
+                case VECTOR:
+                    vectorDocumentsFailed.incrementAndGet();
+                    break;
+                default:
+                    throw new IllegalArgumentException("Unknown task type: " + taskType);
+            }
+            updateProgress(taskType);
+            checkIfFinished();
         }
-        updateProgress(taskType);
-        checkIfFinished();
     }
 
     private void checkIfFinished() {
-        boolean isMainFinished = mainDocumentsProcessed.get() + mainDocumentsFailed.get() == mainDocumentsFound.get();
-        boolean isVectorFinished = vectorDocumentsProcessed.get() + vectorDocumentsFailed.get() == vectorDocumentsFound.get();
+        synchronized (this) {
+            boolean isMainFinished = mainDocumentsProcessed.get() + mainDocumentsFailed.get() == mainDocumentsFound.get();
+            boolean isVectorFinished = vectorDocumentsProcessed.get() + vectorDocumentsFailed.get() == vectorDocumentsFound.get();
 
-        if (isMainFinished) {
-            finalizeTracking(TaskType.MAIN);
-        }
-        if (isVectorFinished) {
-            finalizeTracking(TaskType.VECTOR);
+            if (isMainFinished) {
+                finalizeTracking(TaskType.MAIN);
+            }
+            if (isVectorFinished) {
+                finalizeTracking(TaskType.VECTOR);
+            }
         }
     }
 
-    public void markIndexingAsFailed() {
+    public synchronized void markIndexingAsFailed() {
         markIndexingAsFailed(TaskType.MAIN);
         markIndexingAsFailed(TaskType.VECTOR);
     }
 
-    public void markIndexingAsFailed(TaskType taskType) {
+    public synchronized void markIndexingAsFailed(TaskType taskType) {
         switch (taskType) {
             case MAIN:
                 markStatusAsFailed(mainTaskStatus);
@@ -250,7 +256,7 @@ public class IndexingTracker {
     }
 
     // Helper functions
-    public float getPercentComplete(TaskType taskType) {
+    public synchronized float getPercentComplete(TaskType taskType) {
         switch (taskType) {
             case MAIN:
                 return mainTaskStatus.getPercentComplete();
@@ -261,7 +267,7 @@ public class IndexingTracker {
         }
     }
 
-    public float getAverageDocsPerSecond(TaskType taskType) {
+    public synchronized float getAverageDocsPerSecond(TaskType taskType) {
         LocalDateTime endTime;
         long durationInSeconds;
 

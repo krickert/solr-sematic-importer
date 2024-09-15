@@ -2,44 +2,47 @@ package com.krickert.search.indexer.solr.vector.event;
 
 import com.krickert.search.indexer.config.IndexerConfiguration;
 import com.krickert.search.indexer.config.VectorConfig;
-import com.krickert.search.indexer.dto.SolrDocumentType;
 import com.krickert.search.indexer.solr.SchemaConstants;
-import com.krickert.search.indexer.solr.index.SolrInputDocumentQueue;
+import com.krickert.search.indexer.solr.client.SolrClientService;
 import com.krickert.search.indexer.tracker.IndexingTracker;
 import com.krickert.search.service.*;
 import io.micronaut.retry.annotation.Retryable;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.solr.client.solrj.SolrServerException;
+import org.apache.solr.client.solrj.impl.ConcurrentUpdateHttp2SolrClient;
+import org.apache.solr.client.solrj.impl.Http2SolrClient;
 import org.apache.solr.common.SolrInputDocument;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
 import java.util.*;
 
 @Singleton
 public class ChunkDocumentListener implements DocumentListener {
 
     private static final Logger log = LoggerFactory.getLogger(ChunkDocumentListener.class);
+    private static final int BATCH_SIZE = 20;
+
     private final Map<String, VectorConfig> chunkVectorConfig;
     private final ChunkServiceGrpc.ChunkServiceBlockingStub chunkServiceBlockingStub;
     private final EmbeddingServiceGrpc.EmbeddingServiceBlockingStub embeddingServiceBlockingStub;
-    private final SolrInputDocumentQueue solrInputDocumentQueue;
+    private final ConcurrentUpdateHttp2SolrClient vectorSolrClient;
     private final IndexingTracker indexingTracker;
-
 
     public ChunkDocumentListener(IndexerConfiguration indexerConfiguration,
                                  @Named("chunkService") ChunkServiceGrpc.ChunkServiceBlockingStub chunkServiceBlockingStub,
                                  @Named("vectorEmbeddingService") EmbeddingServiceGrpc.EmbeddingServiceBlockingStub embeddingServiceBlockingStub,
-                                 @Named("vectorDocumentQueue") SolrInputDocumentQueue solrInputDocumentQueue,
+                                 SolrClientService solrClientService,
                                  IndexingTracker indexingTracker) {
         this.chunkVectorConfig = indexerConfiguration.getChunkVectorConfig();
         this.chunkServiceBlockingStub = chunkServiceBlockingStub;
         this.embeddingServiceBlockingStub = embeddingServiceBlockingStub;
-        this.solrInputDocumentQueue = solrInputDocumentQueue;
+        this.vectorSolrClient = solrClientService.vectorConcurrentClient();
         this.indexingTracker = indexingTracker;
     }
-
 
     @Override
     public void processDocument(SolrInputDocument document) {
@@ -66,6 +69,7 @@ public class ChunkDocumentListener implements DocumentListener {
 
         if (fieldValue == null) {
             log.warn("Field '{}' is null for document with ID '{}'. Skipping processing for this field.", fieldName, origDocId);
+            indexingTracker.vectorDocumentProcessed();
             return;
         }
 
@@ -82,23 +86,36 @@ public class ChunkDocumentListener implements DocumentListener {
 
         log.info("There are {} chunks in document with ID {}", chunkerReply.getChunksCount(), origDocId);
 
-        EmbeddingsVectorsReply embeddingsVectorsReply = getEmbeddingsVectorsReply(chunkerReply.getChunksList());
-        List<SolrInputDocument> chunkDocuments = createChunkDocuments(fieldName, embeddingsVectorsReply.getEmbeddingsList(), chunkerReply.getChunksList(), origDocId, crawlId, dateCreated, vectorConfig.getChunkFieldVectorName());
+        List<String> chunksList = chunkerReply.getChunksList();
+        boolean hasError = false;
+        for (int i = 0; i < chunksList.size(); i += BATCH_SIZE) {
+            int endIndex = Math.min(i + BATCH_SIZE, chunksList.size());
+            List<String> chunkBatch = chunksList.subList(i, endIndex);
 
-        try {
-            solrInputDocumentQueue.addDocuments(vectorConfig.getDestinationCollection(), chunkDocuments, SolrDocumentType.VECTOR);
-            indexingTracker.vectorDocumentProcessed();
-        } catch (RuntimeException e) {
-            log.error("Could not process document with ID {} due to error: {}", origDocId, e.getMessage());
+            EmbeddingsVectorsReply batchReply = getEmbeddingsVectorsReply(chunkBatch);
+            List<SolrInputDocument> chunkDocuments = createChunkDocuments(fieldName, batchReply.getEmbeddingsList(), chunkBatch, i, origDocId, crawlId, dateCreated, vectorConfig.getChunkFieldVectorName());
+
+            try {
+                log.info("Adding chunks for parent id {} with {} documents to the {} collection with type VECTOR and document chunk batch {}", origDocId, chunkDocuments.size(), vectorConfig.getDestinationCollection(), i);
+                vectorSolrClient.add(vectorConfig.getDestinationCollection(), chunkDocuments);
+                log.info("Addded {} documents to the {} collection with type VECTOR and document chunk batch {}", chunkDocuments.size(), vectorConfig.getDestinationCollection(), i);
+            } catch (SolrServerException | IOException e) {
+                log.error("Could not process document with ID {} due to error: {}", origDocId, e.getMessage());
+                hasError = true;
+            }
+        }
+        if (hasError) {
             indexingTracker.vectorDocumentFailed();
+        } else {
+            indexingTracker.vectorDocumentProcessed();
         }
     }
 
-    private List<SolrInputDocument> createChunkDocuments(String fieldName, List<EmbeddingsVectorReply> embeddingsList, List<String> chunksList, String origDocId, String crawlId, Object dateCreated, String chunkVectorFieldName) {
+    private List<SolrInputDocument> createChunkDocuments(String fieldName, List<EmbeddingsVectorReply> embeddingsList, List<String> chunksList, int chunkBatch, String origDocId, String crawlId, Object dateCreated, String chunkVectorFieldName) {
         List<SolrInputDocument> chunkDocuments = new ArrayList<>(chunksList.size());
 
         for (int i = 0; i < chunksList.size(); i++) {
-            SolrInputDocument docToAdd = createSolrInputDocument(origDocId, chunksList.get(i), i, embeddingsList.get(i).getEmbeddingsList(), fieldName, crawlId, dateCreated, chunkVectorFieldName);
+            SolrInputDocument docToAdd = createSolrInputDocument(origDocId, chunksList.get(i), i * (chunkBatch + 1), embeddingsList.get(i).getEmbeddingsList(), fieldName, crawlId, dateCreated, chunkVectorFieldName);
             chunkDocuments.add(docToAdd);
         }
 

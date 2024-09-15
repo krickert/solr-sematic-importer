@@ -1,16 +1,16 @@
 package com.krickert.search.indexer.solr.client;
 
+import com.krickert.search.indexer.config.IndexerConfiguration;
 import com.krickert.search.indexer.config.SolrConfiguration;
 import com.krickert.search.indexer.config.VectorConfig;
 import io.micronaut.core.io.ResourceLoader;
+import io.micronaut.core.util.CollectionUtils;
 import jakarta.inject.Inject;
-import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import org.apache.solr.client.solrj.SolrClient;
 import org.apache.solr.client.solrj.SolrQuery;
 import org.apache.solr.client.solrj.SolrServerException;
 import org.apache.solr.client.solrj.impl.BaseHttpSolrClient;
-import org.apache.solr.client.solrj.impl.Http2SolrClient;
 import org.apache.solr.client.solrj.request.CollectionAdminRequest;
 import org.apache.solr.client.solrj.request.ConfigSetAdminRequest;
 import org.apache.solr.client.solrj.request.GenericSolrRequest;
@@ -27,8 +27,10 @@ import java.net.URL;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
@@ -36,15 +38,25 @@ import static com.google.common.base.Preconditions.checkNotNull;
 public class SolrAdminActions {
     private static final Logger log = LoggerFactory.getLogger(SolrAdminActions.class);
 
-    private final SolrClient solrClient;
+    private final SolrClient inlineSolrClient;
+    private final SolrClient vectorSolrClient;
+    private final Collection<String> vectorCollections;
     private final ResourceLoader resourceLoader;
 
 
     @Inject
     public SolrAdminActions(SolrClientService solrClientService,
-                            ResourceLoader resourceLoader) {
+                            ResourceLoader resourceLoader,
+                            IndexerConfiguration indexerConfiguration) {
         checkNotNull(solrClientService);
-        this.solrClient = checkNotNull(solrClientService.inlineSolrClient());
+        checkNotNull(indexerConfiguration);
+        this.inlineSolrClient = checkNotNull(solrClientService.inlineSolrClient());
+        this.vectorSolrClient = checkNotNull(solrClientService.vectorSolrClient());
+        if (CollectionUtils.isNotEmpty(indexerConfiguration.getChunkVectorConfig())) {
+            this.vectorCollections = indexerConfiguration.getChunkVectorConfig().values().stream().map(VectorConfig::getDestinationCollection).collect(Collectors.toList());
+        } else {
+            this.vectorCollections = List.of();
+        }
         this.resourceLoader = checkNotNull(resourceLoader);
         log.info("SolrAdminActions is created");
     }
@@ -55,7 +67,7 @@ public class SolrAdminActions {
      * @return true if the ping is successful, false otherwise
      */
     public boolean isSolrServerAlive() {
-        return isSolrServerAlive(solrClient);
+        return isSolrServerAlive(inlineSolrClient);
     }
 
     public boolean isSolrServerAlive(SolrClient solrClient) {
@@ -69,7 +81,7 @@ public class SolrAdminActions {
     }
 
     public boolean doesCollectionExist(String collectionName) {
-        return doesCollectionExist(collectionName, solrClient);
+        return doesCollectionExist(collectionName, inlineSolrClient);
     }
 
     /**
@@ -91,7 +103,7 @@ public class SolrAdminActions {
 
 
     public boolean doesConfigExist(String configToCheck) {
-        return doesConfigExist(solrClient, configToCheck);
+        return doesConfigExist(inlineSolrClient, configToCheck);
     }
 
 
@@ -131,7 +143,7 @@ public class SolrAdminActions {
     }
 
     public void uploadConfigSet(String configFile, String configName) {
-        uploadConfigSet(solrClient, configFile, configName);
+        uploadConfigSet(inlineSolrClient, configFile, configName);
     }
 
     public void uploadConfigSet(SolrClient client, String configFile, String configName) {
@@ -177,11 +189,11 @@ public class SolrAdminActions {
     }
 
     public void createCollection(String destinationCollection, SolrConfiguration.SolrCollectionCreationConfig config) {
-        createCollection(solrClient, destinationCollection, config.getCollectionConfigName(), config.getCollectionConfigFile(), config.getNumberOfReplicas(), config.getNumberOfShards());
+        createCollection(inlineSolrClient, destinationCollection, config.getCollectionConfigName(), config.getCollectionConfigFile(), config.getNumberOfReplicas(), config.getNumberOfShards());
     }
 
     public void createCollection(String destinationCollection, VectorConfig.VectorCollectionCreationConfig config) {
-        createCollection(solrClient, destinationCollection, config.getCollectionConfigName(), config.getCollectionConfigFile(), config.getNumberOfReplicas(), config.getNumberOfShards());
+        createCollection(vectorSolrClient, destinationCollection, config.getCollectionConfigName(), config.getCollectionConfigFile(), config.getNumberOfReplicas(), config.getNumberOfShards());
     }
 
     public void createCollection(SolrClient solrClient, String collectionName,
@@ -222,11 +234,15 @@ public class SolrAdminActions {
 
     public void commit(String collectionName) {
         try {
-            solrClient.commit(collectionName);
+            inlineSolrClient.commit(collectionName);
         } catch (SolrServerException | IOException e) {
             log.error("Could not commit collection {} due to {}", collectionName, e.getMessage());
             throw new RuntimeException(e);
         }
+    }
+
+    public void commitVectorCollections() {
+        vectorCollections.forEach(this::commit);
     }
 
     public int deleteOrphansAfterIndexing(String collection, String crawlId) {
@@ -240,7 +256,7 @@ public class SolrAdminActions {
             query.addFacetField("crawl_id");
             query.setFacetLimit(-1);  // Ensure we get all unique crawl IDs
 
-            QueryResponse queryResponse = solrClient.query(collection, query);
+            QueryResponse queryResponse = inlineSolrClient.query(collection, query);
             FacetField facetField = queryResponse.getFacetField("crawl_id");
             List<FacetField.Count> facetCounts = facetField.getValues();
 
@@ -249,8 +265,8 @@ public class SolrAdminActions {
             }
 
             // Delete documents with the specified crawlId
-            UpdateResponse deleteResponse = solrClient.deleteByQuery(collection, "-crawl_id:" + crawlId);
-            solrClient.commit(collection);
+            UpdateResponse deleteResponse = inlineSolrClient.deleteByQuery(collection, "-crawl_id:" + crawlId);
+            inlineSolrClient.commit(collection);
 
             // Log and return the number of documents deleted
             numDeleted = deleteResponse.getStatus() == 0 ? deleteResponse.getResponse().get("numFound") != null ? Integer.parseInt(deleteResponse.getResponse().get("numFound").toString()) : 0 : 0;

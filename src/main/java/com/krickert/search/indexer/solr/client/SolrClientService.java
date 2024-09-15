@@ -1,7 +1,6 @@
 package com.krickert.search.indexer.solr.client;
 
 import com.krickert.search.indexer.config.IndexerConfiguration;
-import com.krickert.search.indexer.solr.index.SolrInputDocumentQueue;
 import io.micronaut.context.annotation.Bean;
 import io.micronaut.context.annotation.Factory;
 import io.micronaut.context.annotation.Requires;
@@ -46,18 +45,19 @@ public class SolrClientService {
     @Bean
     @Named("vectorConcurrentClient")
     public ConcurrentUpdateHttp2SolrClient vectorConcurrentClient() {
-        String solrUrl = indexerConfiguration.getDestinationSolrConfiguration().getConnection().getUrl();
-        return new ConcurrentUpdateHttp2SolrClient.Builder(solrUrl, vectorSolrClient(), false)
-                .withQueueSize(indexerConfiguration.getDestinationSolrConfiguration().getConnection().getQueueSize())
-                .withThreadCount(indexerConfiguration.getDestinationSolrConfiguration().getConnection().getThreadCount())
-                .build();
+        try {
+            log.info("Creating inlineConcurrentClient bean");
+            String solrUrl = indexerConfiguration.getDestinationSolrConfiguration().getConnection().getUrl();
+            return new ConcurrentUpdateHttp2SolrClient.Builder(solrUrl, inlineSolrClient(), false)
+                    .withQueueSize(indexerConfiguration.getDestinationSolrConfiguration().getConnection().getQueueSize())
+                    .withThreadCount(indexerConfiguration.getDestinationSolrConfiguration().getConnection().getThreadCount())
+                    .build();
+        } catch (Exception e) {
+            log.error("Error creating inlineConcurrentClient bean", e);
+            throw e;
+        }
     }
 
-    @Bean
-    @Named("vectorDocumentQueue")
-    public SolrInputDocumentQueue vectorDocumentQueue() {
-        return new SolrInputDocumentQueue(vectorConcurrentClient());
-    }
 
     @Bean
     @Named("inlineSolrClient")
@@ -91,9 +91,5 @@ public class SolrClientService {
         }
     }
 
-    @Bean
-    @Named("inlineDocumentQueue")
-    public SolrInputDocumentQueue inlineDocumentQueue() {
-        return new SolrInputDocumentQueue(inlineConcurrentClient());
-    }
+
 }

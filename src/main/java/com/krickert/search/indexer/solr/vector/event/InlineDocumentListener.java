@@ -2,8 +2,7 @@ package com.krickert.search.indexer.solr.vector.event;
 
 import com.krickert.search.indexer.config.IndexerConfiguration;
 import com.krickert.search.indexer.config.VectorConfig;
-import com.krickert.search.indexer.dto.SolrDocumentType;
-import com.krickert.search.indexer.solr.index.SolrInputDocumentQueue;
+import com.krickert.search.indexer.solr.client.SolrClientService;
 import com.krickert.search.indexer.tracker.IndexingTracker;
 import com.krickert.search.service.EmbeddingServiceGrpc;
 import com.krickert.search.service.EmbeddingsVectorReply;
@@ -12,6 +11,7 @@ import io.micronaut.retry.annotation.Retryable;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.solr.client.solrj.impl.ConcurrentUpdateHttp2SolrClient;
 import org.apache.solr.common.SolrInputDocument;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -25,16 +25,16 @@ public class InlineDocumentListener implements DocumentListener {
     private static final Logger log = LoggerFactory.getLogger(InlineDocumentListener.class);
     private final Map<String, VectorConfig> inlineVectorConfig;
     private final EmbeddingServiceGrpc.EmbeddingServiceBlockingStub embeddingServiceBlockingStub;
-    private final SolrInputDocumentQueue solrInputDocumentQueue;
+    private final ConcurrentUpdateHttp2SolrClient inlineSolrClient;
     private final String destinationCollectionName;
     private final IndexingTracker indexingTracker;
 
-    public InlineDocumentListener(@Named("inlineDocumentQueue") SolrInputDocumentQueue inlineDocumentQueue,
+    public InlineDocumentListener(SolrClientService solrClientService,
                                   IndexerConfiguration indexerConfiguration,
                                   @Named("inlineEmbeddingService") EmbeddingServiceGrpc.EmbeddingServiceBlockingStub inlineEmbeddingService,
                                   IndexingTracker indexingTracker) {
 
-        this.solrInputDocumentQueue = inlineDocumentQueue;
+        this.inlineSolrClient =  solrClientService.inlineConcurrentClient();
         this.inlineVectorConfig = indexerConfiguration.getInlineVectorConfig();
         this.embeddingServiceBlockingStub = inlineEmbeddingService;
         this.destinationCollectionName = indexerConfiguration.getDestinationSolrConfiguration().getCollection();
@@ -58,8 +58,8 @@ public class InlineDocumentListener implements DocumentListener {
             return;
         }
         try {
-            solrInputDocumentQueue.addDocument(destinationCollectionName, document, SolrDocumentType.DOCUMENT);
-        } catch (RuntimeException e) {
+            inlineSolrClient.add(destinationCollectionName, document);
+        } catch (Exception e) {
             log.error("could not process document with id {} due to error: {}", origDocId, e.getMessage());
             indexingTracker.documentFailed();
             return;
