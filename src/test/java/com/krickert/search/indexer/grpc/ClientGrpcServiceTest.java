@@ -14,7 +14,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 class ClientGrpcServiceTest {
 
     @Inject
-    ClientGrpcTestContainers clientGrpcTestContainers;
+    ClientTestContainers clientTestContainers;
 
     @Inject
     ApplicationContext context;

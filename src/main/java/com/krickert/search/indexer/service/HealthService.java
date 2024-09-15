@@ -5,6 +5,7 @@ import com.krickert.search.service.EmbeddingServiceGrpc;
 import com.krickert.search.service.HealthCheckRequest;
 import io.grpc.StatusRuntimeException;
 import jakarta.inject.Inject;
+import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -16,9 +17,9 @@ public class HealthService {
     private final ChunkServiceGrpc.ChunkServiceBlockingStub chunkService;
 
     @Inject
-    public HealthService(EmbeddingServiceGrpc.EmbeddingServiceBlockingStub embeddingService,
+    public HealthService(@Named("vectorEmbeddingService") EmbeddingServiceGrpc.EmbeddingServiceBlockingStub vectorEmbeddingService,
                          ChunkServiceGrpc.ChunkServiceBlockingStub chunkService) {
-        this.embeddingService = embeddingService;
+        this.embeddingService = vectorEmbeddingService;
         this.chunkService = chunkService;
         log.info("Set up the chunking and embedding service managed channels.");
     }

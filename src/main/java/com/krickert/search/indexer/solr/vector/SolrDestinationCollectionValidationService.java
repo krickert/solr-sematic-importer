@@ -6,12 +6,14 @@ import com.krickert.search.indexer.config.SolrConfiguration;
 import com.krickert.search.indexer.config.VectorConfig;
 import com.krickert.search.indexer.service.HealthService;
 import com.krickert.search.indexer.solr.client.SolrAdminActions;
+import com.krickert.search.indexer.solr.client.SolrClientService;
 import com.krickert.search.indexer.solr.client.VectorFieldValidator;
 import com.krickert.search.service.EmbeddingServiceGrpc;
 import com.krickert.search.service.EmbeddingsVectorRequest;
 import io.micronaut.core.util.StringUtils;
 import io.micronaut.scheduling.annotation.Scheduled;
 import jakarta.inject.Inject;
+import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import org.apache.solr.client.solrj.SolrServerException;
 import org.jetbrains.annotations.NotNull;
@@ -56,7 +58,15 @@ public class SolrDestinationCollectionValidationService {
     }
 
     @Inject
-    public SolrDestinationCollectionValidationService(IndexerConfiguration indexerConfiguration, SolrAdminActions solrAdminActions, EmbeddingServiceGrpc.EmbeddingServiceBlockingStub embeddingServiceBlockingStub, HealthService healthService, VectorFieldValidator vectorFieldValidator) {
+    public SolrDestinationCollectionValidationService(
+            IndexerConfiguration indexerConfiguration,
+            SolrClientService solrClientService,
+            SolrAdminActions solrAdminActions,
+            @Named("vectorEmbeddingService")
+            EmbeddingServiceGrpc.EmbeddingServiceBlockingStub embeddingServiceBlockingStub,
+            HealthService healthService,
+            VectorFieldValidator vectorFieldValidator) {
+        checkNotNull(solrClientService);
         this.indexerConfiguration = indexerConfiguration;
         this.solrAdminActions = solrAdminActions;
         this.embeddingServiceBlockingStub = embeddingServiceBlockingStub;

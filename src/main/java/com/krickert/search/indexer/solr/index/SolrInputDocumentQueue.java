@@ -1,12 +1,9 @@
 package com.krickert.search.indexer.solr.index;
 
 import com.krickert.search.indexer.dto.SolrDocumentType;
-import com.krickert.search.indexer.tracker.IndexingTracker;
 import io.micronaut.core.util.CollectionUtils;
 import io.micronaut.retry.annotation.Retryable;
 import jakarta.annotation.PreDestroy;
-import jakarta.inject.Inject;
-import jakarta.inject.Singleton;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.solr.client.solrj.impl.ConcurrentUpdateHttp2SolrClient;
@@ -18,19 +15,15 @@ import java.io.IOException;
 import java.util.List;
 import java.util.stream.Collectors;
 
-@Singleton
 public class SolrInputDocumentQueue {
 
     private static final Logger log = LoggerFactory.getLogger(SolrInputDocumentQueue.class);
 
     private final ConcurrentUpdateHttp2SolrClient solrClient;
-    private final IndexingTracker indexingTracker;
 
-    @Inject
-    public SolrInputDocumentQueue(ConcurrentUpdateHttp2SolrClient solrClient, IndexingTracker indexingTracker) {
+    public SolrInputDocumentQueue(ConcurrentUpdateHttp2SolrClient solrClient) {
         log.info("Creating SolrInputDocumentQueue");
         this.solrClient = solrClient;
-        this.indexingTracker = indexingTracker;
         log.info("Created SolrInputDocumentQueue");
     }
 
@@ -39,9 +32,7 @@ public class SolrInputDocumentQueue {
         try {
             log.info("Adding document {} of type {} to Solr collection: {}", document.getFieldValue("id"), type, collection);
             solrClient.add(collection, document);
-            indexingTracker.documentProcessed();
         } catch (SolrServerException | IOException e) {
-            indexingTracker.documentFailed();
             log.error("Error adding document to Solr. Document ID: {}", document.getFieldValue("id"), e);
             throw new RuntimeException(e);
         }
@@ -57,9 +48,7 @@ public class SolrInputDocumentQueue {
             List<String> ids = documents.stream().map(doc -> (String) doc.getFieldValue("id")).toList();
             log.info("Adding {} documents of type {} to Solr collection: {} with ids: {}", documents.size(), type, collection, ids);
             solrClient.add(collection, documents);
-            documents.forEach(doc -> indexingTracker.chunkProcessed());
         } catch (SolrServerException | IOException e) {
-            documents.forEach(doc -> indexingTracker.documentFailed());
             List<String> docIds = documents.stream().map(doc -> doc.getFieldValue("id").toString()).collect(Collectors.toList());
             log.error("Error adding documents to Solr. Document IDs: {}", docIds, e);
             throw new RuntimeException(e);

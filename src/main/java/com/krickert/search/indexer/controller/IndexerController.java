@@ -1,5 +1,6 @@
 package com.krickert.search.indexer.controller;
 
+import com.krickert.search.indexer.IndexingFailedExecption;
 import com.krickert.search.indexer.SemanticIndexer;
 import com.krickert.search.indexer.config.IndexerConfiguration;
 import com.krickert.search.indexer.dto.IndexingStatus;
@@ -11,14 +12,11 @@ import io.micronaut.http.annotation.Controller;
 import io.micronaut.http.annotation.Get;
 import io.micronaut.http.annotation.Post;
 import io.micronaut.http.annotation.QueryValue;
-import io.micronaut.scheduling.annotation.Async;
 import io.micronaut.security.annotation.Secured;
 import io.micronaut.security.rules.SecurityRule;
 import jakarta.inject.Inject;
 
 import java.util.*;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionStage;
 
 @Controller("/indexer")
 public class IndexerController {
@@ -34,40 +32,11 @@ public class IndexerController {
         this.semanticIndexer = semanticIndexer;
     }
 
-    @Post("/start")
-    @Secured(SecurityRule.IS_ANONYMOUS)
-    public HttpResponse<String> startIndexing(IndexerConfiguration config) {
-        String result = indexerService.startIndexing(config);
-        if (result.startsWith("Indexing job started")) {
-            return HttpResponse.ok(result);
-        } else {
-            return HttpResponse.status(HttpStatus.SERVICE_UNAVAILABLE).body(result);
-        }
-    }
-
     @Get("/start")
     @Secured(SecurityRule.IS_ANONYMOUS)
-    public CompletionStage<HttpResponse<String>> startIndexing(@QueryValue Optional<String> configName) {
-        return CompletableFuture.supplyAsync(() -> startIndexingAsync(configName.or(() -> Optional.of("default"))));
-    }
-
-    private HttpResponse<String> startIndexingAsync(Optional<String> configName) {
-        String config = configName.orElse("default");
-        if ("default".equals(config)) {
-            semanticIndexer.runDefaultExportJob();
-            return HttpResponse.ok("Indexing job started");
-        }
-
-        String result = indexerService.startIndexingByName(config);
-        return createResponseBasedOnResult(result);
-    }
-
-    private HttpResponse<String> createResponseBasedOnResult(String result) {
-        if (result.startsWith("Indexing job started")) {
-            return HttpResponse.ok(result);
-        } else {
-            return HttpResponse.status(HttpStatus.SERVICE_UNAVAILABLE).body(result);
-        }
+    public HttpResponse<String> startIndexing() throws IndexingFailedExecption {
+        semanticIndexer.runDefaultExportJob();
+        return HttpResponse.ok("Indexing job started");
     }
 
     @Post("/registerConfig")
@@ -89,7 +58,7 @@ public class IndexerController {
             return HttpResponse.ok(status);
         } catch (Exception e) {
             IndexingStatus errorStatus = new IndexingStatus();
-            errorStatus.setCurrentStatus("Error retrieving status: " + e.getMessage());
+            errorStatus.setCurrentStatusMessage("Error retrieving status: " + e.getMessage());
             errorStatus.setOverallStatus(IndexingStatus.OverallStatus.NOT_STARTED);
             return HttpResponse.serverError(errorStatus);
         }
@@ -109,7 +78,7 @@ public class IndexerController {
             return HttpResponse.ok(history);
         } catch (Exception e) {
             IndexingStatus errorStatus = new IndexingStatus();
-            errorStatus.setCurrentStatus("Error retrieving history: " + e.getMessage());
+            errorStatus.setCurrentStatusMessage("Error retrieving history: " + e.getMessage());
             return HttpResponse.serverError(Collections.singletonList(errorStatus));
         }
     }

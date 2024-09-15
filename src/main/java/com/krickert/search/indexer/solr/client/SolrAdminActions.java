@@ -10,6 +10,7 @@ import org.apache.solr.client.solrj.SolrClient;
 import org.apache.solr.client.solrj.SolrQuery;
 import org.apache.solr.client.solrj.SolrServerException;
 import org.apache.solr.client.solrj.impl.BaseHttpSolrClient;
+import org.apache.solr.client.solrj.impl.Http2SolrClient;
 import org.apache.solr.client.solrj.request.CollectionAdminRequest;
 import org.apache.solr.client.solrj.request.ConfigSetAdminRequest;
 import org.apache.solr.client.solrj.request.GenericSolrRequest;
@@ -40,8 +41,10 @@ public class SolrAdminActions {
 
 
     @Inject
-    public SolrAdminActions(@Named("solrClient") SolrClient solrClient, ResourceLoader resourceLoader) {
-        this.solrClient = checkNotNull(solrClient);
+    public SolrAdminActions(SolrClientService solrClientService,
+                            ResourceLoader resourceLoader) {
+        checkNotNull(solrClientService);
+        this.solrClient = checkNotNull(solrClientService.inlineSolrClient());
         this.resourceLoader = checkNotNull(resourceLoader);
         log.info("SolrAdminActions is created");
     }

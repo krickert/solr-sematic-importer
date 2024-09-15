@@ -11,6 +11,8 @@ import java.util.Collection;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import static com.google.common.base.Preconditions.checkNotNull;
+
 @Singleton
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @Serdeable
@@ -28,6 +30,10 @@ public class IndexerConfiguration {
     @JsonProperty("vector_config")
     private final Map<String, VectorConfig> vectorConfig;
 
+    private final Map<String, VectorConfig> inlineVectorConfig;
+
+    private final Map<String, VectorConfig> chunkVectorConfig;
+
     @Inject
     public IndexerConfiguration(
             @JsonProperty("indexerConfigurationProperties") IndexerConfigurationProperties indexerConfigurationProperties,
@@ -35,7 +41,13 @@ public class IndexerConfiguration {
             @JsonProperty("vectorConfig") Map<String, VectorConfig> vectorConfig
     ) {
         this.indexerConfigurationProperties = indexerConfigurationProperties;
-        this.vectorConfig = vectorConfig;
+        this.vectorConfig = checkNotNull(vectorConfig);
+        this.chunkVectorConfig = vectorConfig.entrySet().stream()
+                .filter(entry -> Boolean.TRUE.equals(entry.getValue().getChunkField())) // Handles nulls by treating them as false
+                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+        this.inlineVectorConfig = vectorConfig.entrySet().stream()
+                .filter(entry -> Boolean.FALSE.equals(entry.getValue().getChunkField())) // Handles nulls by treating them as false
+                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
         this.solrConfiguration = solrConfigurations.stream()
                 .collect(Collectors.toMap(SolrConfiguration::getName, solrConfiguration -> solrConfiguration));
     }
@@ -75,5 +87,13 @@ public class IndexerConfiguration {
 
     public void setName(String name) {
         this.name = name;
+    }
+
+    public Map<String, VectorConfig> getInlineVectorConfig() {
+        return inlineVectorConfig;
+    }
+
+    public Map<String, VectorConfig> getChunkVectorConfig() {
+        return chunkVectorConfig;
     }
 }

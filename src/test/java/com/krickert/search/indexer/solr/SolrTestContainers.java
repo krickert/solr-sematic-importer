@@ -12,7 +12,6 @@ import org.testcontainers.utility.DockerImageName;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-@Requires(notEnv = Environment.DEVELOPMENT)
 @Singleton
 public class SolrTestContainers {
 

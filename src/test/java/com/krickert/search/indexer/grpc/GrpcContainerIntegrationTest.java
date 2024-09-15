@@ -12,12 +12,12 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 public class GrpcContainerIntegrationTest {
 
     @Inject
-    ClientGrpcTestContainers clientGrpcTestContainers;
+    ClientTestContainers clientTestContainers;
 
     @Test
     void test() {
-        Assertions.assertNotNull(clientGrpcTestContainers);
-        for (GenericContainer<?> container : clientGrpcTestContainers.getContainers()) {
+        Assertions.assertNotNull(clientTestContainers);
+        for (GenericContainer<?> container : clientTestContainers.getContainers()) {
             Assertions.assertNotNull(container);
             Assertions.assertTrue(container.isRunning());
             Assertions.assertTrue(container.isCreated());

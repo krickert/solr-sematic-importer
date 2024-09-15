@@ -9,6 +9,8 @@ import io.micronaut.context.annotation.Factory;
 import io.micronaut.context.annotation.Requires;
 import io.micronaut.context.env.Environment;
 import io.micronaut.grpc.annotation.GrpcChannel;
+import jakarta.inject.Named;
+import jdk.jfr.Name;
 
 @Factory
 @Requires(notEnv = Environment.TEST)
@@ -24,7 +26,19 @@ public class Clients {
     }
 
     @Bean
-    EmbeddingServiceGrpc.EmbeddingServiceBlockingStub embeddingServiceBlockingStub(
+    @Named("inlineEmbeddingService")
+    EmbeddingServiceGrpc.EmbeddingServiceBlockingStub inlineEmbeddingServiceBlockingStub (
+            @GrpcChannel("${indexer.vector-grpc-channel}")
+            ManagedChannel channel) {
+        return EmbeddingServiceGrpc.newBlockingStub(
+                channel
+        );
+    }
+
+
+    @Bean
+    @Named("vectorEmbeddingService")
+    EmbeddingServiceGrpc.EmbeddingServiceBlockingStub vectorEmbeddingServiceBlockingStub(
             @GrpcChannel("${indexer.vector-grpc-channel}")
             ManagedChannel channel) {
         return EmbeddingServiceGrpc.newBlockingStub(
@@ -33,6 +47,7 @@ public class Clients {
     }
 
     @Bean
+    @Named("chunkService")
     ChunkServiceGrpc.ChunkServiceBlockingStub chunkServiceBlockingStub(
             @GrpcChannel("${indexer.chunker-grpc-channel}")
             ManagedChannel channel) {

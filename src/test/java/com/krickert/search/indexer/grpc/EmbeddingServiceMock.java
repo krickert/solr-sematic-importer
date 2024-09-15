@@ -1,10 +1,6 @@
 package com.krickert.search.indexer.grpc;
 
 import com.krickert.search.service.*;
-import io.micronaut.context.annotation.Bean;
-import io.micronaut.context.annotation.Factory;
-import io.micronaut.context.annotation.Requires;
-import io.micronaut.context.env.Environment;
 
 import java.util.List;
 import java.util.Random;
@@ -13,12 +9,8 @@ import java.util.stream.IntStream;
 
 import static org.mockito.Mockito.*;
 
-@Factory
-@Requires(env = Environment.TEST)
 public class EmbeddingServiceMock {
-
-    @Bean
-    public EmbeddingServiceGrpc.EmbeddingServiceBlockingStub createMock() {
+    public static EmbeddingServiceGrpc.EmbeddingServiceBlockingStub createMock() {
         EmbeddingServiceGrpc.EmbeddingServiceBlockingStub mockStub = mock(EmbeddingServiceGrpc.EmbeddingServiceBlockingStub.class);
 
         // Mock createEmbeddingsVector with random floats
@@ -53,7 +45,7 @@ public class EmbeddingServiceMock {
     }
 
     // Generate random floats between min and max
-    private List<Float> generateRandomFloats(int count, float min, float max) {
+    private static List<Float> generateRandomFloats(int count, float min, float max) {
         Random random = new Random();
         return IntStream.range(0, count)
                 .mapToObj(i -> min + random.nextFloat() * (max - min))

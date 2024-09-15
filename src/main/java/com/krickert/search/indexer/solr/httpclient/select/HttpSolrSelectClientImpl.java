@@ -10,6 +10,7 @@ import io.micronaut.http.HttpRequest;
 import io.micronaut.http.client.HttpClient;
 import io.micronaut.http.client.annotation.Client;
 import io.micronaut.http.uri.UriBuilder;
+import io.micronaut.retry.annotation.Retryable;
 import io.reactivex.rxjava3.core.Single;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
@@ -56,6 +57,7 @@ public class HttpSolrSelectClientImpl implements HttpSolrSelectClient {
         log.info("Created Http-based solr client");
     }
 
+    @Retryable
     @Override
     public String getSolrDocs(String solrHost, String solrCollection, Integer paginationSize, Integer pageNumber) {
         try {

@@ -1,16 +1,17 @@
 package com.krickert.search.indexer;
 
 import com.krickert.search.indexer.config.IndexerConfiguration;
-import com.krickert.search.indexer.dto.SolrDocumentType;
+import com.krickert.search.indexer.dto.IndexingStatus;
+import com.krickert.search.indexer.solr.SchemaConstants;
+import com.krickert.search.indexer.solr.client.SolrClientService;
+import com.krickert.search.indexer.solr.vector.event.SolrSourceDocumentPublisher;
+import com.krickert.search.indexer.solr.vector.event.SubscriptionManager;
 import com.krickert.search.indexer.solr.JsonToSolrDocParser;
 import com.krickert.search.indexer.solr.client.SolrAdminActions;
 import com.krickert.search.indexer.solr.httpclient.select.HttpSolrSelectClient;
 import com.krickert.search.indexer.solr.httpclient.select.HttpSolrSelectResponse;
-import com.krickert.search.indexer.solr.index.SolrInputDocumentQueue;
 import com.krickert.search.indexer.solr.vector.SolrDestinationCollectionValidationService;
-import com.krickert.search.indexer.solr.vector.SolrVectorIndexingService;
 import com.krickert.search.indexer.tracker.IndexingTracker;
-import io.micronaut.scheduling.annotation.Async;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 import org.apache.solr.common.SolrInputDocument;
@@ -22,14 +23,10 @@ import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.Collection;
 import java.util.Date;
-import java.util.List;
 import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.IntStream;
 
 import static com.google.common.base.Preconditions.checkNotNull;
+import static java.lang.Thread.sleep;
 
 @Singleton
 public class SolrSemanticIndexer implements SemanticIndexer {
@@ -40,46 +37,42 @@ public class SolrSemanticIndexer implements SemanticIndexer {
     private final JsonToSolrDocParser jsonToSolrDoc;
     private final IndexerConfiguration defaultIndexerConfiguration;
     private final SolrDestinationCollectionValidationService solrDestinationCollectionValidationService;
-    private final SolrVectorIndexingService solrIndexingService;
     private final SolrAdminActions solrAdminActions;
-    private final SolrInputDocumentQueue solrInputDocumentQueue;
     private final IndexingTracker indexingTracker;
+    private final SolrSourceDocumentPublisher solrSourceDocumentPublisher;
 
     @Inject
     public SolrSemanticIndexer(HttpSolrSelectClient httpSolrSelectClient,
                                JsonToSolrDocParser jsonToSolrDoc,
                                IndexerConfiguration defaultIndexerConfiguration,
+                               SolrClientService solrClientService,
                                SolrDestinationCollectionValidationService solrDestinationCollectionValidationService,
-                               SolrVectorIndexingService solrIndexingService,
                                SolrAdminActions solrAdminActions,
-                               SolrInputDocumentQueue solrInputDocumentQueue,
-                               IndexingTracker indexingTracker) {
+                               IndexingTracker indexingTracker,
+                               SolrSourceDocumentPublisher solrSourceDocumentPublisher,
+                               SubscriptionManager subscriptionManager) {
         log.info("creating SemanticIndexer");
+        checkNotNull(solrClientService);
+        checkNotNull(subscriptionManager);
         this.httpSolrSelectClient = checkNotNull(httpSolrSelectClient);
         this.jsonToSolrDoc = checkNotNull(jsonToSolrDoc);
         this.defaultIndexerConfiguration = checkNotNull(defaultIndexerConfiguration);
         this.solrDestinationCollectionValidationService = checkNotNull(solrDestinationCollectionValidationService);
-        this.solrIndexingService = checkNotNull(solrIndexingService);
         this.solrAdminActions = checkNotNull(solrAdminActions);
-        this.solrInputDocumentQueue = checkNotNull(solrInputDocumentQueue);
         this.indexingTracker = checkNotNull(indexingTracker);
         log.info("finished creating SemanticIndexer");
+        this.solrSourceDocumentPublisher = solrSourceDocumentPublisher;
     }
 
     @Override
-    public void runDefaultExportJob() {
-        runExportJob(defaultIndexerConfiguration);
-    }
-
-    @Override
-    public void runExportJob(IndexerConfiguration indexerConfiguration) {
+    public void runDefaultExportJob() throws IndexingFailedExecption {
+        IndexerConfiguration indexerConfiguration = defaultIndexerConfiguration;
         String solr7Host = indexerConfiguration.getSourceSolrConfiguration().getConnection().getUrl();
         String solrSourceCollection = indexerConfiguration.getSourceSolrConfiguration().getCollection();
         String solrDestinationCollection = indexerConfiguration.getDestinationSolrConfiguration().getCollection();
         final int paginationSize = indexerConfiguration.getSourceSolrConfiguration().getConnection().getPaginationSize() == null ? 100 : indexerConfiguration.getSourceSolrConfiguration().getConnection().getPaginationSize();
 
         // Validate the destination collection
-        AtomicInteger pagesProcessed = new AtomicInteger(0);
         solrDestinationCollectionValidationService.validate();
 
         // Create the crawler ID. This will be saved in the collection and documents that are not matching this crawler ID will be deleted
@@ -87,27 +80,75 @@ public class SolrSemanticIndexer implements SemanticIndexer {
 
         long totalExpected = httpSolrSelectClient.getTotalNumberOfDocumentsForCollection(solr7Host, solrSourceCollection);
         assert totalExpected >= 0;
+        indexingTracker.startTracking(crawlId.toString());
         indexingTracker.setTotalDocumentsFound(totalExpected);
         long numOfPagesExpected = calculateNumOfPages(totalExpected, paginationSize);
         assert numOfPagesExpected >= 0;
-        List<CompletableFuture<Void>> futures = IntStream.range(0, (int) numOfPagesExpected)
-                .mapToObj(currentPage -> CompletableFuture.runAsync(
-                        () -> processPages(solr7Host, solrSourceCollection, solrDestinationCollection, paginationSize, currentPage, crawlId, pagesProcessed))
-                )
-                .toList();
-
-        // Wait for all pages to be processed
-        CompletableFuture<Void> allOf = CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]));
-        try {
-            allOf.get();
-        } catch (InterruptedException | ExecutionException e) {
-            throw new RuntimeException(e);
+        for (int currentPage = 0; currentPage < numOfPagesExpected; currentPage++) {
+            processPages(solr7Host, solrSourceCollection, solrDestinationCollection, paginationSize, currentPage, crawlId);
         }
-        log.info("*****PROCESSING COMPLETE. {} pages processed. {} documents exported to destination collection {}", pagesProcessed.get(), totalExpected, solrDestinationCollection);
-        solrInputDocumentQueue.commit(solrDestinationCollection);
+        log.info("*****PUBLISHING COMPLETE. {} documents were pushed and going to the {} collection", totalExpected, solrDestinationCollection);
+
+        waitForIndexingCompletion();
         solrAdminActions.commit(solrDestinationCollection);
         indexingTracker.finalizeTracking();
-        deleteOrphans(solrDestinationCollection, crawlId);
+
+        if (indexingTracker.getCurrentStatus().getOverallStatus() == IndexingStatus.OverallStatus.FAILED) {
+            String errorMessage = String.format("Indexing job %s failed.  End status: \n%s", crawlId, indexingTracker.getCurrentStatus());
+            log.error(errorMessage);
+            throw new IndexingFailedExecption(errorMessage);
+        }
+        //deleteOrphans(solrDestinationCollection, crawlId);
+    }
+
+    private void waitForIndexingCompletion() throws IndexingFailedExecption {
+        int maxWarnings = 3;
+        int warningCount = 0;
+        long previousProcessedCount = 0;
+        int waitTimeInSeconds = 10; // Time to wait between checks for new documents
+        int totalExpected = indexingTracker.getTotalDocumentsFound();
+        while (true) {
+            // Get the current status
+            long totalProcessed = indexingTracker.getCurrentStatus().getTotalDocumentsProcessed();
+            long totalFailed = indexingTracker.getCurrentStatus().getTotalDocumentsFailed();
+            long totalProcessedOrFailed = totalProcessed + totalFailed;
+
+            // Check if the total processed or failed documents meets the expected total
+            if (totalProcessedOrFailed >= totalExpected) {
+                log.info("All documents processed. Marking indexing as complete.");
+                indexingTracker.finalizeTracking();
+                break;
+            } else {
+                log.info("***** INDEXING STILL IN PROGRESS: Expecting {} documents. {}", totalExpected, indexingTracker.getCurrentStatus());
+            }
+
+            // Wait for some time before checking again
+            try {
+                sleep(waitTimeInSeconds * 1000);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw new IndexingFailedExecption("Waiting for indexing completion was interrupted", e);
+            }
+
+            // Check if the count of processed documents has not increased
+            if (totalProcessedOrFailed == previousProcessedCount) {
+                warningCount++;
+                log.warn("Potential hanging crawl detected. No progress in last {} seconds. Warning {}/{}", waitTimeInSeconds, warningCount, maxWarnings);
+
+                // Exit the loop and log an error if max warnings are reached
+                if (warningCount >= maxWarnings) {
+                    log.error("Max warnings reached. Hanging crawl detected. Exiting wait loop.");
+                    indexingTracker.markIndexingAsFailed();
+                    break;
+                }
+            } else {
+                // Reset warning count if progress is made
+                warningCount = 0;
+            }
+
+            // Update the previousProcessedCount
+            previousProcessedCount = totalProcessedOrFailed;
+        }
     }
 
     private void deleteOrphans(String solrDestinationCollection, UUID crawlId) {
@@ -120,7 +161,7 @@ public class SolrSemanticIndexer implements SemanticIndexer {
         }
     }
 
-    public void processPages(String solr7Host, String solrSourceCollection, String solrDestinationCollection, Integer paginationSize, int currentPage, UUID crawlId, AtomicInteger pagesProcessed) {
+    public void processPages(String solr7Host, String solrSourceCollection, String solrDestinationCollection, Integer paginationSize, int currentPage, UUID crawlId) {
         String solrDocs = fetchSolrDocuments(solr7Host, solrSourceCollection, paginationSize, currentPage);
         HttpSolrSelectResponse response = jsonToSolrDoc.parseSolrDocuments(solrDocs);
 
@@ -133,8 +174,7 @@ public class SolrSemanticIndexer implements SemanticIndexer {
             return;
         }
         log.info("Exporting {} documents from source collection {} to destination collection {}", documents.size(), solrSourceCollection, solrDestinationCollection);
-        processDocuments(documents, solrDestinationCollection, crawlId);
-        pagesProcessed.incrementAndGet();
+        processDocuments(documents, crawlId);
     }
 
     private long calculateNumOfPages(long totalDocuments, int paginationSize) {
@@ -149,38 +189,38 @@ public class SolrSemanticIndexer implements SemanticIndexer {
         return response.getNumFound() == 0;
     }
 
-    private void processDocuments(Collection<SolrInputDocument> documents, String solrDestinationCollection, UUID crawlId) {
-        documents.parallelStream().forEach(doc -> {
-            insertCreationDate(doc);
+    private void processDocuments(Collection<SolrInputDocument> documents, UUID crawlId) {
+        documents.forEach(doc -> {
+            insertDates(doc);
             insertCrawlId(doc, crawlId);
-            try {
-                solrIndexingService.addDocsWithVectorsToSolr(doc, crawlId.toString(), Date.from(Instant.now()));
-            } catch (Exception e) {
-                indexingTracker.documentFailed();
-                log.error("Failed to process document with ID: {}", doc.getFieldValue("id"), e);
-            }
+            solrSourceDocumentPublisher.publishDocument(doc);
         });
-        documents.forEach(doc -> indexingTracker.documentProcessed());
     }
 
     private static void insertCrawlId(SolrInputDocument doc, UUID crawlId) {
-        doc.setField("crawl_id", crawlId.toString());
+        doc.setField(SchemaConstants.CRAWL_ID, crawlId.toString());
     }
 
-    private static void insertCreationDate(SolrInputDocument doc) {
-        if (doc.containsKey("creation_date")) {
+    private static void insertDates(SolrInputDocument doc) {
+        checkDateField(doc, "creation_date");
+        doc.addField(SchemaConstants.CRAWL_DATE, convertToSolrDateString(System.currentTimeMillis()));
+    }
+
+    private static void checkDateField(SolrInputDocument doc, String date) {
+        if (doc.containsKey(date)) {
             // Retrieve the creation_date field
             try {
-                Long creationDate = (Long) doc.getFieldValue("creation_date");
+                Long creationDate = (Long) doc.getFieldValue(date);
                 // Update the Solr document with the converted date strings
-                doc.setField("creation_date", convertToSolrDateString(creationDate));
+                doc.setField(date, convertToSolrDateString(creationDate));
             } catch (Exception e) {
-                log.warn("creation_date exists but was not a Long value {}", e.getMessage());
+                log.warn("{} exists but was not a Long value {}", date, e.getMessage());
                 try {
-                    Date creationDate = (Date) doc.getFieldValue("creation_date");
-                    doc.setField("creation_date", convertToSolrDateString(creationDate.getTime()));
+                    Date creationDate = (Date) doc.getFieldValue(date);
+                    doc.setField(date, convertToSolrDateString(creationDate.getTime()));
                 } catch (Exception e2) {
-                    log.warn("creation_date exists but was not a Date value. Giving up on conversion. Value {} with message {}", doc.getFieldValue("creation_date"), e.getMessage());
+                    log.warn("{} exists but was not a Date value. Giving up on conversion. Value {} with message {}",
+                            date, doc.getFieldValue(date), e.getMessage());
                 }
             }
         }

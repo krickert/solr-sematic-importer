@@ -8,6 +8,8 @@ import com.github.dockerjava.api.model.Ports;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.krickert.search.indexer.config.IndexerConfiguration;
+import com.krickert.search.indexer.solr.SolrTestContainers;
+import com.krickert.search.indexer.solr.client.SolrClientService;
 import io.micronaut.context.annotation.Requires;
 import io.micronaut.context.env.Environment;
 import jakarta.inject.Inject;
@@ -21,11 +23,13 @@ import org.testcontainers.utility.DockerImageName;
 import java.util.List;
 import java.util.Map;
 
+import static com.google.common.base.Preconditions.checkNotNull;
+
 @Requires(notEnv = Environment.DEVELOPMENT)
 @Singleton
-public class ClientGrpcTestContainers {
+public class ClientTestContainers {
 
-    private static final Logger log = LoggerFactory.getLogger(ClientGrpcTestContainers.class);
+    private static final Logger log = LoggerFactory.getLogger(ClientTestContainers.class);
 
     private static final List<GenericContainer<?>> containers = Lists.newArrayList();
     private static final Map<String, GrpcEntry> containerRegistry = Maps.newHashMap();
@@ -36,9 +40,14 @@ public class ClientGrpcTestContainers {
     }
 
     @Inject
-    public ClientGrpcTestContainers(Map<String, GrpcClientConfig> grpcClientConfigs, IndexerConfiguration configuration) {
+    public ClientTestContainers(Map<String, GrpcClientConfig> grpcClientConfigs,
+                                SolrTestContainers solrTestContainers,
+                                IndexerConfiguration configuration,
+                                SolrClientService solrClientService) {
         this.grpcClientConfigs = grpcClientConfigs;
         initializeContainers(grpcClientConfigs, configuration);
+        checkNotNull(solrTestContainers);
+        checkNotNull(solrClientService);
     }
 
     private void initializeContainers(Map<String, GrpcClientConfig> grpcClientConfigs, IndexerConfiguration configuration) {

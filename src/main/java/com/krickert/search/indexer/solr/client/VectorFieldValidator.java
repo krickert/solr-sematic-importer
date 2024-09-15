@@ -6,6 +6,7 @@ import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import org.apache.solr.client.solrj.SolrClient;
 import org.apache.solr.client.solrj.SolrServerException;
+import org.apache.solr.client.solrj.impl.Http2SolrClient;
 import org.apache.solr.client.solrj.request.schema.FieldTypeDefinition;
 import org.apache.solr.client.solrj.request.schema.SchemaRequest;
 import org.apache.solr.client.solrj.response.schema.FieldTypeRepresentation;
@@ -19,6 +20,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import static com.google.common.base.Preconditions.checkNotNull;
+
 @Singleton
 public class VectorFieldValidator {
 
@@ -26,9 +29,10 @@ public class VectorFieldValidator {
     private final SolrClient solrClient;
     private final static Set<String> validValues = Sets.newHashSet("euclidean", "dot_product", "cosine");
 
-    public VectorFieldValidator(
-            @Named("solrClient") SolrClient solrClient) {
-        this.solrClient = solrClient;
+    public VectorFieldValidator(SolrClientService solrClientService) {
+        log.info("Creating VectorFieldValidator");
+        this.solrClient = checkNotNull(solrClientService.inlineSolrClient());
+        log.info("Created VectorFieldValidator");
     }
 
     public String validateVectorField(

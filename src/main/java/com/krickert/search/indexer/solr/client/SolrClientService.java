@@ -1,8 +1,10 @@
 package com.krickert.search.indexer.solr.client;
 
 import com.krickert.search.indexer.config.IndexerConfiguration;
+import com.krickert.search.indexer.solr.index.SolrInputDocumentQueue;
 import io.micronaut.context.annotation.Bean;
 import io.micronaut.context.annotation.Factory;
+import io.micronaut.context.annotation.Requires;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
 import org.apache.solr.client.solrj.impl.ConcurrentUpdateHttp2SolrClient;
@@ -15,16 +17,21 @@ public class SolrClientService {
     private static final Logger log = LoggerFactory.getLogger(SolrClientService.class);
 
     private final OktaAuthenticatedHttpListenerFactory authenticatedRequestResponseListener;
+    private final IndexerConfiguration indexerConfiguration;
 
     @Inject
-    public SolrClientService(OktaAuthenticatedHttpListenerFactory authenticatedRequestResponseListener) {
+    public SolrClientService(OktaAuthenticatedHttpListenerFactory authenticatedRequestResponseListener,
+                             IndexerConfiguration indexerConfiguration) {
+        log.info("Creating solr client service");
         this.authenticatedRequestResponseListener = authenticatedRequestResponseListener;
+        this.indexerConfiguration = indexerConfiguration;
+        
     }
 
     @Bean
-    @Named("solrClient")
-    public Http2SolrClient createSolrClient(IndexerConfiguration indexerConfiguration) {
-        log.info("Creating destination solr client");
+    @Named("vectorSolrClient")
+    public Http2SolrClient vectorSolrClient() {
+        log.info("Creating destination vector solr client");
         String solrUrl = indexerConfiguration.getDestinationSolrConfiguration().getConnection().getUrl();
         String collection = indexerConfiguration.getDestinationSolrConfiguration().getCollection();
         Http2SolrClient client = new Http2SolrClient.Builder(solrUrl)
@@ -32,18 +39,61 @@ public class SolrClientService {
                 .withFollowRedirects(true)
                 .build();
         client.addListenerFactory(authenticatedRequestResponseListener);
-        log.info("Destination solr client created.");
+        log.info("Destination vector solr client created.");
         return client;
     }
 
     @Bean
-    @Named("concurrentClient")
-    public ConcurrentUpdateHttp2SolrClient createConcurrentUpdateSolrClient(IndexerConfiguration indexerConfiguration, @Named("solrClient") Http2SolrClient solrClient) {
+    @Named("vectorConcurrentClient")
+    public ConcurrentUpdateHttp2SolrClient vectorConcurrentClient() {
         String solrUrl = indexerConfiguration.getDestinationSolrConfiguration().getConnection().getUrl();
-        return new ConcurrentUpdateHttp2SolrClient.Builder(solrUrl, solrClient, false)
+        return new ConcurrentUpdateHttp2SolrClient.Builder(solrUrl, vectorSolrClient(), false)
                 .withQueueSize(indexerConfiguration.getDestinationSolrConfiguration().getConnection().getQueueSize())
                 .withThreadCount(indexerConfiguration.getDestinationSolrConfiguration().getConnection().getThreadCount())
                 .build();
     }
 
+    @Bean
+    @Named("vectorDocumentQueue")
+    public SolrInputDocumentQueue vectorDocumentQueue() {
+        return new SolrInputDocumentQueue(vectorConcurrentClient());
+    }
+
+    @Bean
+    @Named("inlineSolrClient")
+    public Http2SolrClient inlineSolrClient() {
+        log.info("Creating inline destination solr client");
+        String solrUrl = indexerConfiguration.getDestinationSolrConfiguration().getConnection().getUrl();
+        String collection = indexerConfiguration.getDestinationSolrConfiguration().getCollection();
+        Http2SolrClient client = new Http2SolrClient.Builder(solrUrl)
+                .withDefaultCollection(collection)
+                .withFollowRedirects(true)
+                .build();
+        client.addListenerFactory(authenticatedRequestResponseListener);
+        log.info("Destination inline solr client created.");
+        return client;
+    }
+
+    @Bean
+    @Named("inlineConcurrentClient")
+    @Requires(bean = Http2SolrClient.class)
+    public ConcurrentUpdateHttp2SolrClient inlineConcurrentClient() {
+        try {
+            log.info("Creating inlineConcurrentClient bean");
+            String solrUrl = indexerConfiguration.getDestinationSolrConfiguration().getConnection().getUrl();
+            return new ConcurrentUpdateHttp2SolrClient.Builder(solrUrl, inlineSolrClient(), false)
+                    .withQueueSize(indexerConfiguration.getDestinationSolrConfiguration().getConnection().getQueueSize())
+                    .withThreadCount(indexerConfiguration.getDestinationSolrConfiguration().getConnection().getThreadCount())
+                    .build();
+        } catch (Exception e) {
+            log.error("Error creating inlineConcurrentClient bean", e);
+            throw e;
+        }
+    }
+
+    @Bean
+    @Named("inlineDocumentQueue")
+    public SolrInputDocumentQueue inlineDocumentQueue() {
+        return new SolrInputDocumentQueue(inlineConcurrentClient());
+    }
 }

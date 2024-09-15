@@ -2,7 +2,9 @@ package com.krickert.search.indexer;
 
 import com.krickert.search.indexer.config.IndexerConfiguration;
 import com.krickert.search.indexer.enhancers.ProtobufToSolrDocument;
-import com.krickert.search.indexer.grpc.ClientGrpcTestContainers;
+import com.krickert.search.indexer.grpc.ClientTestContainers;
+import com.krickert.search.indexer.grpc.Clients;
+import com.krickert.search.indexer.grpc.TestClients;
 import com.krickert.search.indexer.solr.SolrDocumentConverter;
 import com.krickert.search.indexer.solr.SolrTestContainers;
 import com.krickert.search.model.pipe.PipeDocument;
@@ -19,12 +21,14 @@ import java.util.Collection;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import static com.google.common.base.Preconditions.checkNotNull;
+
 @MicronautTest
 public class SolrIndexerIntegrationTest {
     private static final Logger log = LoggerFactory.getLogger(SolrIndexerIntegrationTest.class);
 
 
-    private final ClientGrpcTestContainers clientGrpcTestContainers;
+    private final ClientTestContainers clientTestContainers;
     private final SolrDynamicClient solrDynamicClient;
     private final SemanticIndexer semanticIndexer;
     private final IndexerConfiguration indexerConfiguration;
@@ -32,17 +36,20 @@ public class SolrIndexerIntegrationTest {
 
     @BeforeEach
     void setUp() {
-        clientGrpcTestContainers.getContainers().forEach(container -> log.info("Container {}: {}", container.getContainerName(), container.getHost()));
+        clientTestContainers.getContainers().forEach(container -> log.info("Container {}: {}", container.getContainerName(), container.getHost()));
     }
 
     @Inject
     public SolrIndexerIntegrationTest(
-            ClientGrpcTestContainers clientGrpcTestContainers, SolrDynamicClient solrDynamicClient,
+            ClientTestContainers clientTestContainers,
+            TestClients testClients,
+            SolrDynamicClient solrDynamicClient,
             SemanticIndexer semanticIndexer,
             IndexerConfiguration indexerConfiguration,
             SolrTestContainers solrTestContainers) {
         log.info("Solr Test Containers: {} ", solrTestContainers);
-        this.clientGrpcTestContainers = clientGrpcTestContainers;
+        checkNotNull(testClients);
+        this.clientTestContainers = clientTestContainers;
         this.solrDynamicClient = solrDynamicClient;
         this.semanticIndexer = semanticIndexer;
         this.indexerConfiguration = indexerConfiguration;
@@ -52,13 +59,13 @@ public class SolrIndexerIntegrationTest {
 
 
     @Test
-    void testSemanticIndexer() {
+    void testSemanticIndexer() throws IndexingFailedExecption {
         //this would just run, but we first have to setup the source and destination solr
         setupSolr7ForExportTest();
-        semanticIndexer.runExportJob(indexerConfiguration);
+        semanticIndexer.runDefaultExportJob();
 
         //let's reindex everything - see if it works or messes up
-        semanticIndexer.runExportJob(indexerConfiguration);
+        semanticIndexer.runDefaultExportJob();
     }
 
     private void setupSolr7ForExportTest() {

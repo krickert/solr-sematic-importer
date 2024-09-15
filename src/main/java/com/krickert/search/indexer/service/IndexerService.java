@@ -1,5 +1,6 @@
 package com.krickert.search.indexer.service;
 
+import com.krickert.search.indexer.IndexingFailedExecption;
 import com.krickert.search.indexer.SemanticIndexer;
 import com.krickert.search.indexer.config.IndexerConfiguration;
 import com.krickert.search.indexer.dto.IndexingStatus;
@@ -19,50 +20,33 @@ import java.util.concurrent.locks.ReentrantLock;
 public class IndexerService {
 
     private final SemanticIndexer semanticIndexer;
-    private final IndexingTracker indexingTracker;
     private final HealthService healthService;
     private final Map<String, IndexerConfiguration> configurations = new HashMap<>();
     private final Lock startIndexingLock = new ReentrantLock();
+    private final IndexingTracker indexingTracker;
 
     @Inject
     public IndexerService(SemanticIndexer semanticIndexer,
-                          IndexingTracker indexingTracker,
-                          HealthService healthService) {
+                          HealthService healthService,
+                          IndexingTracker indexingTracker) {
         this.semanticIndexer = semanticIndexer;
-        this.indexingTracker = indexingTracker;
         this.healthService = healthService;
+        this.indexingTracker = indexingTracker;
     }
 
-    public String startIndexing(IndexerConfiguration config) {
+    public String startIndexing() {
         startIndexingLock.lock();
         try {
             if (!isIndexerReady()) {
                 return "Indexer is not ready. Please check the status of vectorizer and chunker services.";
             }
-
-            IndexingStatus currentStatus = indexingTracker.getCurrentStatus();
-            if (IndexingStatus.OverallStatus.RUNNING.equals(currentStatus.getOverallStatus())) {
-                return "Indexing job is already in progress.";
-            }
-
-            indexingTracker.reset();
             String indexingId = generateIndexingId();
-            indexingTracker.startTracking(indexingId);
-            IndexingStatus indexingStatus = indexingTracker.getCurrentStatus();
-            indexingStatus.setIndexerConfiguration(config);
-            indexingStatus.setOverallStatus(IndexingStatus.OverallStatus.RUNNING); // Set overall status to RUNNING
 
             new Thread(() -> {
                 try {
-                    semanticIndexer.runExportJob(config);
-                    indexingStatus.setCurrentStatus("completed");
-                    indexingStatus.setOverallStatus(IndexingStatus.OverallStatus.COMPLETED); // Set to COMPLETED
-                } catch (Exception e) {
-                    indexingStatus.setCurrentStatus("errored");
-                    indexingStatus.setOverallStatus(IndexingStatus.OverallStatus.NOT_STARTED); // Set to NOT_STARTED on error
-                } finally {
-                    indexingStatus.setLastRun(LocalDateTime.now()); // Set the last run time
-                    indexingTracker.finalizeTracking();
+                    semanticIndexer.runDefaultExportJob();
+                } catch (IndexingFailedExecption e) {
+                    throw new RuntimeException(e);
                 }
             }).start();
 
@@ -77,7 +61,7 @@ public class IndexerService {
         if (config == null) {
             return "Configuration not found: " + configName;
         }
-        return startIndexing(config);
+        return startIndexing();
     }
 
     public boolean isIndexerReady() {
@@ -87,11 +71,6 @@ public class IndexerService {
     public boolean isIndexingInProgress() {
         IndexingStatus currentStatus = getCurrentStatus();
         return IndexingStatus.OverallStatus.RUNNING.equals(currentStatus.getOverallStatus());
-    }
-
-    @Scheduled(fixedRate = "1s", initialDelay = "10s")
-    public void updateProgress() {
-        indexingTracker.updateProgress();
     }
 
     public IndexingStatus getCurrentStatus() {
@@ -115,15 +94,4 @@ public class IndexerService {
         configurations.put(config.getName(), config);
     }
 
-    public void documentProcessed() {
-        indexingTracker.documentProcessed();
-    }
-
-    public void documentFailed() {
-        indexingTracker.documentFailed();
-    }
-
-    public void chunkProcessed() {
-        indexingTracker.chunkProcessed();
-    }
 }

@@ -4,7 +4,6 @@ import com.krickert.search.indexer.config.IndexerConfiguration;
 
 public interface SemanticIndexer {
 
-    void runDefaultExportJob();
+    void runDefaultExportJob() throws IndexingFailedExecption;
 
-    void runExportJob(IndexerConfiguration indexerConfiguration);
 }

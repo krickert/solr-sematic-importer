@@ -22,7 +22,6 @@ public class IndexingTracker {
     private final AtomicLong totalDocumentsFound = new AtomicLong(0);
     private final AtomicInteger totalDocumentsProcessed = new AtomicInteger(0);
     private final AtomicInteger totalDocumentsFailed = new AtomicInteger(0);
-    private final AtomicInteger chunksProcessed = new AtomicInteger(0);
     private LocalDateTime timeStarted;
     private final Integer maxHistorySize;
 
@@ -35,8 +34,9 @@ public class IndexingTracker {
         return indexingStatus;
     }
 
-    public void setTotalDocumentsFound(Long toalDocuments) {
-        totalDocumentsFound.set(toalDocuments);
+    public void setTotalDocumentsFound(Long totalDocuments) {
+        totalDocumentsFound.set(totalDocuments);
+        updateProgress();
     }
 
     public void reset() {
@@ -46,43 +46,62 @@ public class IndexingTracker {
         indexingStatus.setTotalDocumentsProcessed(0);
         indexingStatus.setTotalDocumentsFailed(0);
         indexingStatus.setPercentComplete(0);
-        indexingStatus.setChunksProcessed(0);
-        indexingStatus.setChunksPerDocument(0);
         indexingStatus.setTimeStarted(null);
         indexingStatus.setEndTime(null);
-        indexingStatus.setCurrentStatus(null);
+        indexingStatus.setCurrentStatusMessage(null);
         indexingStatus.setAverageDocsPerSecond(0);
-        indexingStatus.setAverageChunksPerSecond(0);
 
         totalDocumentsFound.set(0);
         totalDocumentsProcessed.set(0);
         totalDocumentsFailed.set(0);
-        chunksProcessed.set(0);
 
         timeStarted = null;
+    }
+
+    public Integer getTotalDocumentsFound() {
+        return totalDocumentsFound.intValue();
+    }
+
+    public Integer getTotalDocumentsProcessed() {
+        return totalDocumentsProcessed.intValue();
+    }
+
+    public Integer getTotalDocumentsFailed() {
+        return totalDocumentsFailed.intValue();
     }
 
     public void startTracking(String indexingId) {
         timeStarted = LocalDateTime.now();
         indexingStatus.setIndexingId(indexingId);
         indexingStatus.setTimeStarted(timeStarted);
-        indexingStatus.setCurrentStatus("started");
+        indexingStatus.setCurrentStatusMessage("started");
+        indexingStatus.setOverallStatus(IndexingStatus.OverallStatus.RUNNING);
     }
 
     public void updateProgress() {
+        if (indexingStatus.getOverallStatus() == IndexingStatus.OverallStatus.NOT_STARTED) {
+            return;
+        }
         indexingStatus.setTotalDocumentsFound(totalDocumentsFound.get());
         indexingStatus.setTotalDocumentsProcessed(totalDocumentsProcessed.get());
         indexingStatus.setTotalDocumentsFailed(totalDocumentsFailed.get());
-        indexingStatus.setChunksProcessed(chunksProcessed.get());
 
+        // Update percent complete
         long totalFound = totalDocumentsFound.get();
         int totalProcessed = totalDocumentsProcessed.get();
         indexingStatus.setPercentComplete(totalFound > 0 ? ((float) totalProcessed / totalFound) * 100 : 0);
-        indexingStatus.setChunksPerDocument(totalProcessed > 0 ? (float) chunksProcessed.get() / totalProcessed : 0);
+
+        // Update average documents per second
+        LocalDateTime endTime = indexingStatus.getEndTime() != null ? indexingStatus.getEndTime() : LocalDateTime.now();
+        long durationInSeconds = Duration.between(indexingStatus.getTimeStarted(), endTime).getSeconds();
+        float avgDocsPerSecond = durationInSeconds > 0 ? (float) totalDocumentsProcessed.get() / durationInSeconds : 0;
+        indexingStatus.setAverageDocsPerSecond(avgDocsPerSecond);
     }
 
     public void finalizeTracking() {
         indexingStatus.setEndTime(LocalDateTime.now());
+        indexingStatus.setCurrentStatusMessage("completed");
+        indexingStatus.setOverallStatus(IndexingStatus.OverallStatus.COMPLETED);
         calculateFinalStatistics();
         recordHistory(indexingStatus);
     }
@@ -92,7 +111,6 @@ public class IndexingTracker {
             long durationInSeconds = Duration.between(indexingStatus.getTimeStarted(), indexingStatus.getEndTime()).getSeconds();
             if (durationInSeconds > 0) {
                 indexingStatus.setAverageDocsPerSecond((float) totalDocumentsProcessed.get() / durationInSeconds);
-                indexingStatus.setAverageChunksPerSecond((float) chunksProcessed.get() / durationInSeconds);
             }
         }
     }
@@ -111,13 +129,36 @@ public class IndexingTracker {
     // Methods for tracking document processing
     public void documentProcessed() {
         totalDocumentsProcessed.incrementAndGet();
+        updateProgress();
+        checkIfFinished();
     }
 
     public void documentFailed() {
         totalDocumentsFailed.incrementAndGet();
+        updateProgress();
+        checkIfFinished();
     }
 
-    public void chunkProcessed() {
-        chunksProcessed.incrementAndGet();
+    private void checkIfFinished() {
+        if (totalDocumentsProcessed.get() + totalDocumentsFailed.get() == totalDocumentsFound.get()) {
+            finalizeTracking();
+        }
+    }
+
+    public void markIndexingAsFailed() {
+        indexingStatus.setOverallStatus(IndexingStatus.OverallStatus.FAILED);
+        indexingStatus.setCurrentStatusMessage("failed");
+    }
+
+    // Helper function to get percent complete
+    public float getPercentComplete() {
+        return indexingStatus.getPercentComplete();
+    }
+
+    // Helper function to get average documents processed per second.
+    public float getAverageDocsPerSecond() {
+        LocalDateTime endTime = indexingStatus.getEndTime() != null ? indexingStatus.getEndTime() : LocalDateTime.now();
+        long durationInSeconds = Duration.between(indexingStatus.getTimeStarted(), endTime).getSeconds();
+        return durationInSeconds > 0 ? (float) totalDocumentsProcessed.get() / durationInSeconds : 0;
     }
 }

@@ -1,6 +1,7 @@
 package com.krickert.search.indexer.dto;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.MoreObjects;
 import com.krickert.search.indexer.config.IndexerConfiguration;
 import io.micronaut.core.annotation.Introspected;
 import io.micronaut.serde.annotation.Serdeable;
@@ -15,7 +16,10 @@ public class IndexingStatus {
         NONE_AVAILABLE,
         NOT_STARTED,
         RUNNING,
-        COMPLETED
+        COMPLETED,
+        FAILED,
+        ABORTED,
+        COMPLETED_WITH_ERRORS
     }
 
     @JsonProperty("indexing_id")
@@ -48,8 +52,8 @@ public class IndexingStatus {
     @JsonProperty("end_time")
     private LocalDateTime endTime;
 
-    @JsonProperty("current_status")
-    private String currentStatus;
+    @JsonProperty("current_status_message")
+    private String currentStatusMessage;
 
     @JsonProperty("overall_status")
     private OverallStatus overallStatus;
@@ -75,7 +79,7 @@ public class IndexingStatus {
 
     // Single string constructor
     public IndexingStatus(String message) {
-        this.currentStatus = message;
+        this.currentStatusMessage = message;
         this.overallStatus = OverallStatus.NOT_STARTED; // Default
     }
 
@@ -83,7 +87,7 @@ public class IndexingStatus {
     public IndexingStatus(String indexingId, IndexerConfiguration indexerConfiguration, long totalDocumentsFound,
                           int totalDocumentsProcessed, int totalDocumentsFailed, float percentComplete,
                           int chunksProcessed, float chunksPerDocument, LocalDateTime timeStarted,
-                          LocalDateTime endTime, String currentStatus, float averageDocsPerSecond,
+                          LocalDateTime endTime, String currentStatusMessage, float averageDocsPerSecond,
                           float averageChunksPerSecond, int totalDocumentsDeleted, OverallStatus overallStatus,
                           LocalDateTime lastRun) {
         this.indexingId = indexingId;
@@ -96,7 +100,7 @@ public class IndexingStatus {
         this.chunksPerDocument = chunksPerDocument;
         this.timeStarted = timeStarted;
         this.endTime = endTime;
-        this.currentStatus = currentStatus;
+        this.currentStatusMessage = currentStatusMessage;
         this.averageDocsPerSecond = averageDocsPerSecond;
         this.averageChunksPerSecond = averageChunksPerSecond;
         this.totalDocumentsDeleted = totalDocumentsDeleted;
@@ -185,12 +189,12 @@ public class IndexingStatus {
         this.endTime = endTime;
     }
 
-    public String getCurrentStatus() {
-        return currentStatus;
+    public String getCurrentStatusMessage() {
+        return currentStatusMessage;
     }
 
-    public void setCurrentStatus(String currentStatus) {
-        this.currentStatus = currentStatus;
+    public void setCurrentStatusMessage(String currentStatusMessage) {
+        this.currentStatusMessage = currentStatusMessage;
     }
 
     public OverallStatus getOverallStatus() {
@@ -246,12 +250,34 @@ public class IndexingStatus {
         clone.setChunksPerDocument(this.chunksPerDocument);
         clone.setTimeStarted(this.timeStarted);
         clone.setEndTime(this.endTime);
-        clone.setCurrentStatus(this.currentStatus);
+        clone.setCurrentStatusMessage(this.currentStatusMessage);
         clone.setAverageDocsPerSecond(this.averageDocsPerSecond);
         clone.setAverageChunksPerSecond(this.averageChunksPerSecond);
         clone.setTotalDocumentsDeleted(this.totalDocumentsDeleted);
         clone.setOverallStatus(this.overallStatus);
         clone.setLastRun(this.lastRun);
         return clone;
+    }
+
+    @Override
+    public String toString() {
+        return MoreObjects.toStringHelper(this)
+                .add("indexingId", indexingId)
+                .add("indexerConfiguration", indexerConfiguration)
+                .add("totalDocumentsFound", totalDocumentsFound)
+                .add("totalDocumentsProcessed", totalDocumentsProcessed)
+                .add("totalDocumentsFailed", totalDocumentsFailed)
+                .add("percentComplete", percentComplete)
+                .add("chunksProcessed", chunksProcessed)
+                .add("chunksPerDocument", chunksPerDocument)
+                .add("timeStarted", timeStarted)
+                .add("endTime", endTime)
+                .add("currentStatus", currentStatusMessage)
+                .add("overallStatus", overallStatus)
+                .add("lastRun", lastRun)
+                .add("averageDocsPerSecond", averageDocsPerSecond)
+                .add("averageChunksPerSecond", averageChunksPerSecond)
+                .add("totalDocumentsDeleted", totalDocumentsDeleted)
+                .toString();
     }
 }
