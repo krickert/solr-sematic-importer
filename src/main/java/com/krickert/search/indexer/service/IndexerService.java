@@ -74,7 +74,7 @@ public class IndexerService {
     }
 
     public IndexingStatus getCurrentStatus() {
-        IndexingStatus status = indexingTracker.getCurrentStatus();
+        IndexingStatus status = indexingTracker.getMainTaskStatus();
         if (status == null) { // If no status is available, set it as NONE_AVAILABLE
             status = new IndexingStatus();
             status.setOverallStatus(IndexingStatus.OverallStatus.NONE_AVAILABLE);

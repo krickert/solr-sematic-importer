@@ -26,6 +26,8 @@ import java.util.Date;
 import java.util.UUID;
 
 import static com.google.common.base.Preconditions.checkNotNull;
+import static com.krickert.search.indexer.tracker.IndexingTracker.TaskType.MAIN;
+import static com.krickert.search.indexer.tracker.IndexingTracker.TaskType.VECTOR;
 import static java.lang.Thread.sleep;
 
 @Singleton
@@ -89,42 +91,46 @@ public class SolrSemanticIndexer implements SemanticIndexer {
         }
         log.info("*****PUBLISHING COMPLETE. {} documents were pushed and going to the {} collection", totalExpected, solrDestinationCollection);
 
-        waitForIndexingCompletion();
+        waitForIndexingCompletion(MAIN);
         solrAdminActions.commit(solrDestinationCollection);
-        indexingTracker.finalizeTracking();
+        indexingTracker.finalizeTracking(IndexingTracker.TaskType.MAIN);
+        waitForIndexingCompletion(VECTOR);
+        indexingTracker.finalizeTracking(VECTOR);
 
-        if (indexingTracker.getCurrentStatus().getOverallStatus() == IndexingStatus.OverallStatus.FAILED) {
-            String errorMessage = String.format("Indexing job %s failed.  End status: \n%s", crawlId, indexingTracker.getCurrentStatus());
+        if (indexingTracker.getMainTaskStatus().getOverallStatus() == IndexingStatus.OverallStatus.FAILED) {
+            String errorMessage = String.format("Indexing job %s failed.  End status: \n%s", crawlId, indexingTracker.getMainTaskStatus());
             log.error(errorMessage);
             throw new IndexingFailedExecption(errorMessage);
         }
         //deleteOrphans(solrDestinationCollection, crawlId);
     }
 
-    private void waitForIndexingCompletion() throws IndexingFailedExecption {
+    private void waitForIndexingCompletion(IndexingTracker.TaskType taskType) throws IndexingFailedExecption {
         int maxWarnings = 3;
         int warningCount = 0;
         long previousProcessedCount = 0;
         int waitTimeInSeconds = 10; // Time to wait between checks for new documents
-        int totalExpected = indexingTracker.getTotalDocumentsFound();
+        IndexingStatus taskStatus = getStatusByTaskType(taskType); // Getting the respective task status.
+        long totalExpected = taskStatus.getTotalDocumentsFound();
+
         while (true) {
             // Get the current status
-            long totalProcessed = indexingTracker.getCurrentStatus().getTotalDocumentsProcessed();
-            long totalFailed = indexingTracker.getCurrentStatus().getTotalDocumentsFailed();
+            long totalProcessed = taskStatus.getTotalDocumentsProcessed();
+            long totalFailed = taskStatus.getTotalDocumentsFailed();
             long totalProcessedOrFailed = totalProcessed + totalFailed;
 
             // Check if the total processed or failed documents meets the expected total
             if (totalProcessedOrFailed >= totalExpected) {
-                log.info("All documents processed. Marking indexing as complete.");
-                indexingTracker.finalizeTracking();
+                log.info("All documents processed for {} task. Marking indexing as complete.", taskType);
+                indexingTracker.finalizeTracking(taskType);
                 break;
             } else {
-                log.info("***** INDEXING STILL IN PROGRESS: Expecting {} documents. {}", totalExpected, indexingTracker.getCurrentStatus());
+                log.info("***** INDEXING STILL IN PROGRESS for {} task: Expecting {} documents. {}", taskType, totalExpected, taskStatus);
             }
 
             // Wait for some time before checking again
             try {
-                sleep(waitTimeInSeconds * 1000);
+                Thread.sleep(waitTimeInSeconds * 1000);
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
                 throw new IndexingFailedExecption("Waiting for indexing completion was interrupted", e);
@@ -133,12 +139,12 @@ public class SolrSemanticIndexer implements SemanticIndexer {
             // Check if the count of processed documents has not increased
             if (totalProcessedOrFailed == previousProcessedCount) {
                 warningCount++;
-                log.warn("Potential hanging crawl detected. No progress in last {} seconds. Warning {}/{}", waitTimeInSeconds, warningCount, maxWarnings);
+                log.warn("Potential hanging crawl detected for {} task. No progress in last {} seconds. Warning {}/{}", taskType, waitTimeInSeconds, warningCount, maxWarnings);
 
                 // Exit the loop and log an error if max warnings are reached
                 if (warningCount >= maxWarnings) {
-                    log.error("Max warnings reached. Hanging crawl detected. Exiting wait loop.");
-                    indexingTracker.markIndexingAsFailed();
+                    log.error("Max warnings reached for {} task. Hanging crawl detected. Exiting wait loop.", taskType);
+                    indexingTracker.markIndexingAsFailed(taskType);
                     break;
                 }
             } else {
@@ -148,6 +154,17 @@ public class SolrSemanticIndexer implements SemanticIndexer {
 
             // Update the previousProcessedCount
             previousProcessedCount = totalProcessedOrFailed;
+        }
+    }
+
+    private IndexingStatus getStatusByTaskType(IndexingTracker.TaskType taskType) {
+        switch (taskType) {
+            case MAIN:
+                return indexingTracker.getMainTaskStatus();
+            case VECTOR:
+                return indexingTracker.getVectorTaskStatus();
+            default:
+                throw new IllegalArgumentException("Unknown task type: " + taskType);
         }
     }
 

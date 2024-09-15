@@ -16,101 +16,143 @@ import java.util.stream.Collectors;
 @Singleton
 public class IndexingTracker {
 
-    private final IndexingStatus indexingStatus = new IndexingStatus();
+    private final IndexingStatus mainTaskStatus = new IndexingStatus();
+    private final IndexingStatus vectorTaskStatus = new IndexingStatus();
     private final List<IndexingStatus> indexingHistory = new LinkedList<>();
 
-    private final AtomicLong totalDocumentsFound = new AtomicLong(0);
-    private final AtomicInteger totalDocumentsProcessed = new AtomicInteger(0);
-    private final AtomicInteger totalDocumentsFailed = new AtomicInteger(0);
-    private LocalDateTime timeStarted;
+    private final AtomicLong mainDocumentsFound = new AtomicLong(0);
+    private final AtomicLong vectorDocumentsFound = new AtomicLong(0);
+    private final AtomicInteger mainDocumentsProcessed = new AtomicInteger(0);
+    private final AtomicInteger mainDocumentsFailed = new AtomicInteger(0);
+    private final AtomicInteger vectorDocumentsProcessed = new AtomicInteger(0);
+    private final AtomicInteger vectorDocumentsFailed = new AtomicInteger(0);
     private final Integer maxHistorySize;
+
+    private LocalDateTime timeStarted;
 
     @Inject
     public IndexingTracker(@Value("${indexer-manager.max-history-size}") Integer maxHistorySize) {
         this.maxHistorySize = maxHistorySize == null || maxHistorySize < 0 ? 100 : maxHistorySize;
     }
 
-    public IndexingStatus getCurrentStatus() {
-        return indexingStatus;
+    public IndexingStatus getMainTaskStatus() {
+        return mainTaskStatus;
     }
 
-    public void setTotalDocumentsFound(Long totalDocuments) {
-        totalDocumentsFound.set(totalDocuments);
-        updateProgress();
+    public IndexingStatus getVectorTaskStatus() {
+        return vectorTaskStatus;
     }
 
     public void reset() {
-        indexingStatus.setIndexingId(null);
-        indexingStatus.setIndexerConfiguration(null);
-        indexingStatus.setTotalDocumentsFound(0);
-        indexingStatus.setTotalDocumentsProcessed(0);
-        indexingStatus.setTotalDocumentsFailed(0);
-        indexingStatus.setPercentComplete(0);
-        indexingStatus.setTimeStarted(null);
-        indexingStatus.setEndTime(null);
-        indexingStatus.setCurrentStatusMessage(null);
-        indexingStatus.setAverageDocsPerSecond(0);
+        resetStatus(mainTaskStatus);
+        resetStatus(vectorTaskStatus);
 
-        totalDocumentsFound.set(0);
-        totalDocumentsProcessed.set(0);
-        totalDocumentsFailed.set(0);
+        mainDocumentsFound.set(0);
+        vectorDocumentsFound.set(0);
+        mainDocumentsProcessed.set(0);
+        mainDocumentsFailed.set(0);
+        vectorDocumentsProcessed.set(0);
+        vectorDocumentsFailed.set(0);
 
         timeStarted = null;
     }
 
-    public Integer getTotalDocumentsFound() {
-        return totalDocumentsFound.intValue();
-    }
-
-    public Integer getTotalDocumentsProcessed() {
-        return totalDocumentsProcessed.intValue();
-    }
-
-    public Integer getTotalDocumentsFailed() {
-        return totalDocumentsFailed.intValue();
+    private void resetStatus(IndexingStatus status) {
+        status.setIndexingId(null);
+        status.setIndexerConfiguration(null);
+        status.setTotalDocumentsFound(0);
+        status.setTotalDocumentsProcessed(0);
+        status.setTotalDocumentsFailed(0);
+        status.setPercentComplete(0);
+        status.setTimeStarted(null);
+        status.setEndTime(null);
+        status.setCurrentStatusMessage(null);
+        status.setAverageDocsPerSecond(0);
     }
 
     public void startTracking(String indexingId) {
         timeStarted = LocalDateTime.now();
-        indexingStatus.setIndexingId(indexingId);
-        indexingStatus.setTimeStarted(timeStarted);
-        indexingStatus.setCurrentStatusMessage("started");
-        indexingStatus.setOverallStatus(IndexingStatus.OverallStatus.RUNNING);
+        initializeStatus(mainTaskStatus, indexingId);
+        initializeStatus(vectorTaskStatus, indexingId);
+    }
+
+    private void initializeStatus(IndexingStatus status, String indexingId) {
+        status.setIndexingId(indexingId);
+        status.setTimeStarted(timeStarted);
+        status.setCurrentStatusMessage("started");
+        status.setOverallStatus(IndexingStatus.OverallStatus.RUNNING);
+    }
+
+    public void setTotalDocumentsFound(Long totalDocuments) {
+        mainDocumentsFound.set(totalDocuments);
+        vectorDocumentsFound.set(totalDocuments);
     }
 
     public void updateProgress() {
-        if (indexingStatus.getOverallStatus() == IndexingStatus.OverallStatus.NOT_STARTED) {
+        updateProgress(TaskType.MAIN);
+        updateProgress(TaskType.VECTOR);
+    }
+
+    private void updateProgress(TaskType taskType) {
+        switch (taskType) {
+            case MAIN:
+                updateProgressForStatus(mainTaskStatus, mainDocumentsFound, mainDocumentsProcessed, mainDocumentsFailed);
+                break;
+            case VECTOR:
+                updateProgressForStatus(vectorTaskStatus, vectorDocumentsFound, vectorDocumentsProcessed, vectorDocumentsFailed);
+                break;
+            default:
+                throw new IllegalArgumentException("Unknown task type: " + taskType);
+        }
+    }
+
+    private void updateProgressForStatus(IndexingStatus status, AtomicLong documentsFound, AtomicInteger documentsProcessed, AtomicInteger documentsFailed) {
+        if (status.getOverallStatus() == IndexingStatus.OverallStatus.NOT_STARTED) {
             return;
         }
-        indexingStatus.setTotalDocumentsFound(totalDocumentsFound.get());
-        indexingStatus.setTotalDocumentsProcessed(totalDocumentsProcessed.get());
-        indexingStatus.setTotalDocumentsFailed(totalDocumentsFailed.get());
+
+        status.setTotalDocumentsFound(documentsFound.get());
+        status.setTotalDocumentsProcessed(documentsProcessed.get());
+        status.setTotalDocumentsFailed(documentsFailed.get());
 
         // Update percent complete
-        long totalFound = totalDocumentsFound.get();
-        int totalProcessed = totalDocumentsProcessed.get();
-        indexingStatus.setPercentComplete(totalFound > 0 ? ((float) totalProcessed / totalFound) * 100 : 0);
+        long totalFound = documentsFound.get();
+        int totalProcessed = documentsProcessed.get();
+        status.setPercentComplete(totalFound > 0 ? ((float) totalProcessed / totalFound) * 100 : 0);
 
         // Update average documents per second
-        LocalDateTime endTime = indexingStatus.getEndTime() != null ? indexingStatus.getEndTime() : LocalDateTime.now();
-        long durationInSeconds = Duration.between(indexingStatus.getTimeStarted(), endTime).getSeconds();
-        float avgDocsPerSecond = durationInSeconds > 0 ? (float) totalDocumentsProcessed.get() / durationInSeconds : 0;
-        indexingStatus.setAverageDocsPerSecond(avgDocsPerSecond);
+        LocalDateTime endTime = status.getEndTime() != null ? status.getEndTime() : LocalDateTime.now();
+        long durationInSeconds = Duration.between(status.getTimeStarted(), endTime).getSeconds();
+        float avgDocsPerSecond = durationInSeconds > 0 ? (float) totalProcessed / durationInSeconds : 0;
+        status.setAverageDocsPerSecond(avgDocsPerSecond);
     }
 
-    public void finalizeTracking() {
-        indexingStatus.setEndTime(LocalDateTime.now());
-        indexingStatus.setCurrentStatusMessage("completed");
-        indexingStatus.setOverallStatus(IndexingStatus.OverallStatus.COMPLETED);
-        calculateFinalStatistics();
-        recordHistory(indexingStatus);
+    public void finalizeTracking(TaskType taskType) {
+        switch (taskType) {
+            case MAIN:
+                finalizeStatus(mainTaskStatus);
+                break;
+            case VECTOR:
+                finalizeStatus(vectorTaskStatus);
+                break;
+            default:
+                throw new IllegalArgumentException("Unknown task type: " + taskType);
+        }
     }
 
-    private void calculateFinalStatistics() {
-        if (indexingStatus.getEndTime() != null && indexingStatus.getTimeStarted() != null) {
-            long durationInSeconds = Duration.between(indexingStatus.getTimeStarted(), indexingStatus.getEndTime()).getSeconds();
+    private void finalizeStatus(IndexingStatus status) {
+        status.setEndTime(LocalDateTime.now());
+        status.setCurrentStatusMessage("completed");
+        status.setOverallStatus(IndexingStatus.OverallStatus.COMPLETED);
+        calculateFinalStatistics(status);
+        recordHistory(status);
+    }
+
+    private void calculateFinalStatistics(IndexingStatus status) {
+        if (status.getEndTime() != null && status.getTimeStarted() != null) {
+            long durationInSeconds = Duration.between(status.getTimeStarted(), status.getEndTime()).getSeconds();
             if (durationInSeconds > 0) {
-                indexingStatus.setAverageDocsPerSecond((float) totalDocumentsProcessed.get() / durationInSeconds);
+                status.setAverageDocsPerSecond((float) status.getTotalDocumentsProcessed() / durationInSeconds);
             }
         }
     }
@@ -126,39 +168,120 @@ public class IndexingTracker {
         return indexingHistory.stream().limit(limit).collect(Collectors.toList());
     }
 
-    // Methods for tracking document processing
     public void documentProcessed() {
-        totalDocumentsProcessed.incrementAndGet();
-        updateProgress();
-        checkIfFinished();
+        documentProcessed(TaskType.MAIN);
+    }
+
+    public void vectorDocumentProcessed() {
+        documentProcessed(TaskType.VECTOR);
     }
 
     public void documentFailed() {
-        totalDocumentsFailed.incrementAndGet();
-        updateProgress();
+        documentFailed(TaskType.MAIN);
+    }
+
+    public void vectorDocumentFailed() {
+        documentFailed(TaskType.VECTOR);
+    }
+
+    private void documentProcessed(TaskType taskType) {
+        switch (taskType) {
+            case MAIN:
+                mainDocumentsProcessed.incrementAndGet();
+                break;
+            case VECTOR:
+                vectorDocumentsProcessed.incrementAndGet();
+                break;
+            default:
+                throw new IllegalArgumentException("Unknown task type: " + taskType);
+        }
+        updateProgress(taskType);
+        checkIfFinished();
+    }
+
+    private void documentFailed(TaskType taskType) {
+        switch (taskType) {
+            case MAIN:
+                mainDocumentsFailed.incrementAndGet();
+                break;
+            case VECTOR:
+                vectorDocumentsFailed.incrementAndGet();
+                break;
+            default:
+                throw new IllegalArgumentException("Unknown task type: " + taskType);
+        }
+        updateProgress(taskType);
         checkIfFinished();
     }
 
     private void checkIfFinished() {
-        if (totalDocumentsProcessed.get() + totalDocumentsFailed.get() == totalDocumentsFound.get()) {
-            finalizeTracking();
+        boolean isMainFinished = mainDocumentsProcessed.get() + mainDocumentsFailed.get() == mainDocumentsFound.get();
+        boolean isVectorFinished = vectorDocumentsProcessed.get() + vectorDocumentsFailed.get() == vectorDocumentsFound.get();
+
+        if (isMainFinished) {
+            finalizeTracking(TaskType.MAIN);
+        }
+        if (isVectorFinished) {
+            finalizeTracking(TaskType.VECTOR);
         }
     }
 
     public void markIndexingAsFailed() {
-        indexingStatus.setOverallStatus(IndexingStatus.OverallStatus.FAILED);
-        indexingStatus.setCurrentStatusMessage("failed");
+        markIndexingAsFailed(TaskType.MAIN);
+        markIndexingAsFailed(TaskType.VECTOR);
     }
 
-    // Helper function to get percent complete
-    public float getPercentComplete() {
-        return indexingStatus.getPercentComplete();
+    public void markIndexingAsFailed(TaskType taskType) {
+        switch (taskType) {
+            case MAIN:
+                markStatusAsFailed(mainTaskStatus);
+                break;
+            case VECTOR:
+                markStatusAsFailed(vectorTaskStatus);
+                break;
+            default:
+                throw new IllegalArgumentException("Unknown task type: " + taskType);
+        }
     }
 
-    // Helper function to get average documents processed per second.
-    public float getAverageDocsPerSecond() {
-        LocalDateTime endTime = indexingStatus.getEndTime() != null ? indexingStatus.getEndTime() : LocalDateTime.now();
-        long durationInSeconds = Duration.between(indexingStatus.getTimeStarted(), endTime).getSeconds();
-        return durationInSeconds > 0 ? (float) totalDocumentsProcessed.get() / durationInSeconds : 0;
+    private void markStatusAsFailed(IndexingStatus status) {
+        status.setOverallStatus(IndexingStatus.OverallStatus.FAILED);
+        status.setCurrentStatusMessage("failed");
+    }
+
+    // Helper functions
+    public float getPercentComplete(TaskType taskType) {
+        switch (taskType) {
+            case MAIN:
+                return mainTaskStatus.getPercentComplete();
+            case VECTOR:
+                return vectorTaskStatus.getPercentComplete();
+            default:
+                throw new IllegalArgumentException("Unknown task type: " + taskType);
+        }
+    }
+
+    public float getAverageDocsPerSecond(TaskType taskType) {
+        LocalDateTime endTime;
+        long durationInSeconds;
+
+        switch (taskType) {
+            case MAIN:
+                endTime = mainTaskStatus.getEndTime() != null ? mainTaskStatus.getEndTime() : LocalDateTime.now();
+                durationInSeconds = Duration.between(mainTaskStatus.getTimeStarted(), endTime).getSeconds();
+                return durationInSeconds > 0 ? (float) mainDocumentsProcessed.get() / durationInSeconds : 0;
+
+            case VECTOR:
+                endTime = vectorTaskStatus.getEndTime() != null ? vectorTaskStatus.getEndTime() : LocalDateTime.now();
+                durationInSeconds = Duration.between(vectorTaskStatus.getTimeStarted(), endTime).getSeconds();
+                return durationInSeconds > 0 ? (float) vectorDocumentsProcessed.get() / durationInSeconds : 0;
+
+            default:
+                throw new IllegalArgumentException("Unknown task type: " + taskType);
+        }
+    }
+
+    public enum TaskType {
+        MAIN, VECTOR;
     }
 }

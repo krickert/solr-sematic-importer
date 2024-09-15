@@ -5,6 +5,7 @@ import com.krickert.search.indexer.config.VectorConfig;
 import com.krickert.search.indexer.dto.SolrDocumentType;
 import com.krickert.search.indexer.solr.SchemaConstants;
 import com.krickert.search.indexer.solr.index.SolrInputDocumentQueue;
+import com.krickert.search.indexer.tracker.IndexingTracker;
 import com.krickert.search.service.*;
 import io.micronaut.retry.annotation.Retryable;
 import jakarta.inject.Named;
@@ -25,16 +26,27 @@ public class ChunkDocumentListener implements DocumentListener {
     private final EmbeddingServiceGrpc.EmbeddingServiceBlockingStub embeddingServiceBlockingStub;
     private final SolrInputDocumentQueue solrInputDocumentQueue;
     private final String parentDestinationCollection;
+    private final IndexingTracker indexingTracker;
+
+    private String mainTaskId;
+    private String sideTaskId;
 
     public ChunkDocumentListener(IndexerConfiguration indexerConfiguration,
                                  @Named("chunkService") ChunkServiceGrpc.ChunkServiceBlockingStub chunkServiceBlockingStub,
                                  @Named("vectorEmbeddingService") EmbeddingServiceGrpc.EmbeddingServiceBlockingStub embeddingServiceBlockingStub,
-                                 @Named("vectorDocumentQueue") SolrInputDocumentQueue solrInputDocumentQueue) {
+                                 @Named("vectorDocumentQueue") SolrInputDocumentQueue solrInputDocumentQueue,
+                                 IndexingTracker indexingTracker) {
         this.chunkVectorConfig = indexerConfiguration.getChunkVectorConfig();
         this.chunkServiceBlockingStub = chunkServiceBlockingStub;
         this.embeddingServiceBlockingStub = embeddingServiceBlockingStub;
         this.solrInputDocumentQueue = solrInputDocumentQueue;
         this.parentDestinationCollection = indexerConfiguration.getDestinationSolrConfiguration().getCollection();
+        this.indexingTracker = indexingTracker;
+    }
+
+    public void setTaskIds(String mainTaskId) {
+        this.mainTaskId = mainTaskId;
+        this.sideTaskId = mainTaskId + "-vector";
     }
 
     @Override
@@ -81,7 +93,13 @@ public class ChunkDocumentListener implements DocumentListener {
         EmbeddingsVectorsReply embeddingsVectorsReply = getEmbeddingsVectorsReply(chunkerReply.getChunksList());
         List<SolrInputDocument> chunkDocuments = createChunkDocuments(fieldName, embeddingsVectorsReply.getEmbeddingsList(), chunkerReply.getChunksList(), origDocId, crawlId, dateCreated, vectorConfig.getChunkFieldVectorName());
 
-        solrInputDocumentQueue.addDocuments(vectorConfig.getDestinationCollection(), chunkDocuments, SolrDocumentType.VECTOR);
+        try {
+            solrInputDocumentQueue.addDocuments(vectorConfig.getDestinationCollection(), chunkDocuments, SolrDocumentType.VECTOR);
+            indexingTracker.vectorDocumentProcessed();
+        } catch (RuntimeException e) {
+            log.error("Could not process document with ID {} due to error: {}", origDocId, e.getMessage());
+            indexingTracker.vectorDocumentFailed();
+        }
     }
 
     private List<SolrInputDocument> createChunkDocuments(String fieldName, List<EmbeddingsVectorReply> embeddingsList, List<String> chunksList, String origDocId, String crawlId, Object dateCreated, String chunkVectorFieldName) {
@@ -131,5 +149,4 @@ public class ChunkDocumentListener implements DocumentListener {
                         .build())
                 .build();
     }
-
 }
