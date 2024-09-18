@@ -8,6 +8,9 @@ import io.micronaut.context.annotation.EachProperty;
 import io.micronaut.context.annotation.Parameter;
 import io.micronaut.serde.annotation.Serdeable;
 
+import java.net.InetSocketAddress;
+import java.net.Proxy;
+import java.net.SocketAddress;
 import java.util.Collection;
 import java.util.Collections;
 
@@ -266,7 +269,7 @@ public class SolrConfiguration {
             @JsonProperty("subject")
             private String subject;
 
-            @JsonProperty("user_name")
+            @JsonProperty("user=name")
             private String userName;
 
             @JsonProperty("password")
@@ -275,8 +278,11 @@ public class SolrConfiguration {
             @JsonProperty("scope")
             private String scope;
 
-            @JsonProperty("require_dpop")
+            @JsonProperty("require=dpop")
             private boolean requireDpop = false;
+
+            @JsonProperty(value = "proxy-settings", required = false)
+            private ProxySettings proxySettings;
 
             public boolean isEnabled() {
                 return enabled;
@@ -366,6 +372,13 @@ public class SolrConfiguration {
                 this.requireDpop = requireDpop;
             }
 
+            public ProxySettings getProxySettings() {
+                return proxySettings;
+            }
+            public void setProxySettings(ProxySettings proxySettings) {
+                this.proxySettings = proxySettings;
+            }
+
             @Override
             public String toString() {
                 return MoreObjects.toStringHelper(this)
@@ -380,7 +393,58 @@ public class SolrConfiguration {
                         .add("password", password)
                         .add("scope", scope)
                         .add("requireDpop", requireDpop)
+                        .add("proxySettings", proxySettings)
                         .toString();
+            }
+            @Serdeable
+            @ConfigurationProperties("proxy-settings")
+            public static class ProxySettings {
+                @JsonProperty("enabled")
+                public boolean enabled;
+                @JsonProperty("host")
+                private String host;
+                @JsonProperty("port")
+                private int port;
+
+                public String getHost() {
+                    return host;
+                }
+                public void setHost(String host) {
+                    this.host = host;
+                }
+                public int getPort() {
+                    return port;
+                }
+
+                public void setPort(int port) {
+                    this.port = port;
+                }
+                public boolean isEnabled() {
+                    return enabled;
+                }
+                public void setEnabled(boolean enabled) {
+                    this.enabled = enabled;
+                }
+
+                @Override
+                public String toString() {
+                    return "ProxySettings{" +
+                            "enabled=" + enabled +
+                            ", host='" + host + '\'' +
+                            ", port=" + port +
+                            '}';
+                }
+            }
+            public Proxy createProxy() {
+                if (proxySettings == null || !proxySettings.isEnabled()) {
+                    return Proxy.NO_PROXY;
+                }
+                assert proxySettings.getHost() != null;
+                assert proxySettings.getPort() >= 0;
+
+                SocketAddress sa = new InetSocketAddress(proxySettings.getHost(), proxySettings.getPort());
+                return new Proxy(Proxy.Type.HTTP, sa);
+
             }
         }
     }

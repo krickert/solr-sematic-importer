@@ -47,29 +47,34 @@ solr-config:
       authentication:
         enabled: false
         type: basic
-        user_name: dummy_user
+        user=name: dummy_user
         password: dummy_password
+        proxy-settings:
+          enabled: false
+
   destination:
     version: 9.6.1
     collection: destination_collection
-    collection_creation:
-      collection_config_file: "classpath:default_base_config.zip"
-      collection_config_name: semantic_example
-      number_of_shards: 1
-      number_of_replicas: 2
+    collection-creation:
+      collection-config-file: "classpath:default_base_config.zip"
+      collection-config-name: semantic_example
+      number-of-shards: 1
+      number-of-replicas: 2
     connection:
       url: http://localhost:8983/solr
       queue-size: 300 #size of each of the blocking queues  queue-size * thread-count = total document queue before blocking
       thread-count: 3 #number of threads to create for the indexing client queue
       pagination-size: 100 #defaults to 100, optional
       authentication:
-        enabled: true
+        enabled: false
         type: jwt
         client-secret: default-client-secret
         client-id: client-id-example
         issuer: https://issuer-fake.com/oauth2/default/v1/token
         issuerAuthId: issuer-auth-id
         subject: your-subject
+        proxy=settings:
+          enabled: false
 
 vector-config:
   title:
@@ -90,9 +95,9 @@ vector-config:
     similarity-function: cosine #cosine, dot_product, or euclidean.  Defaults to dot_product
     hnsw-max-connections: 16 #if not filled out, this will default to 16
     hnsw-beam-width: 100 #if not filled out, this will default to 100
-    collection_creation:
-      collection_config_file: "classpath:default-chunk-config.zip"
-      collection_config_name: vector_config
-      number_of_shards: 1
-      number_of_replicas: 2
+    collection-creation:
+      collection-config=file: "classpath:default-chunk-config.zip"
+      collection=config-name: vector_config
+      number-of=shards: 1
+      number-of-replicas: 2
 

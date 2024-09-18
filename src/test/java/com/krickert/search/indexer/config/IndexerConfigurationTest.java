@@ -6,6 +6,7 @@ import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
 import jakarta.inject.Inject;
 import org.junit.jupiter.api.Test;
 
+import java.net.Proxy;
 import java.util.Map;
 
 import static com.krickert.search.indexer.config.ConfigTestHelpers.testConnectionString;
@@ -51,6 +52,11 @@ public class IndexerConfigurationTest {
         assertEquals("basic", sourceConnection.getAuthentication().getType());
         assertEquals("dummy_user", sourceConnection.getAuthentication().getUserName());
         assertEquals("dummy_password", sourceConnection.getAuthentication().getPassword());
+        assertNotNull(sourceConnection.getAuthentication().getProxySettings());
+        Proxy srcProxy = sourceConnection.getAuthentication().createProxy();
+        assertNotNull(srcProxy);
+        assertSame(Proxy.Type.DIRECT, srcProxy.type());
+
         assertNull(sourceConnection.getQueueSize());
         assertNull(sourceConnection.getThreadCount());
         SolrConfiguration destConfig = indexerConfiguration.getDestinationSolrConfiguration();
@@ -80,6 +86,17 @@ public class IndexerConfigurationTest {
         assertEquals("https://my-token-url.com/oauth2/some-token/v1/token", destAuth.getIssuer());
         assertEquals("issuer-auth-id", destAuth.getIssuerAuthId());
         assertEquals("your-subject", destAuth.getSubject());
+        Proxy destProxy = destAuth.createProxy();
+        assertNotNull(destProxy);
+        assertSame(Proxy.Type.HTTP, destProxy.type());
+        SolrConfiguration.Connection.Authentication.ProxySettings destProxySettings = destAuth.getProxySettings();
+        assertNotNull(destProxySettings);
+        assertTrue(destProxySettings.isEnabled());
+        assertEquals("http://localhost", destProxySettings.getHost());
+        assertEquals(80, destProxySettings.getPort());
+        assertEquals(Proxy.Type.HTTP, destProxy.type());
+
+
 
         // Vector Configuration Assertions
         Map<String, VectorConfig> vectorConfigMap = indexerConfiguration.getVectorConfig();

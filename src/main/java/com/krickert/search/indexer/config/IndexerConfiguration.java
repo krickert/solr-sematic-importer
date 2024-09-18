@@ -21,13 +21,13 @@ public class IndexerConfiguration {
     @JsonProperty("name")
     private String name = "default";
 
-    @JsonProperty("indexer_config")
+    @JsonProperty("indexer-config")
     private final IndexerConfigurationProperties indexerConfigurationProperties;
 
-    @JsonProperty("solr_config")
+    @JsonProperty("solr-config")
     private final Map<String, SolrConfiguration> solrConfiguration;
 
-    @JsonProperty("vector_config")
+    @JsonProperty("vector-config")
     private final Map<String, VectorConfig> vectorConfig;
 
     private final Map<String, VectorConfig> inlineVectorConfig;

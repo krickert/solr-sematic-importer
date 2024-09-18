@@ -49,11 +49,11 @@ solr-config:
   destination:
     version: 9.6.1
     collection: destination_collection
-    collection_creation:
-      collection_config_file: "classpath:semantic_example.zip"
-      collection_config_name: semantic_example
-      number_of_shards: 1
-      number_of_replicas: 2
+    collection-creation:
+      collection-config-file: "classpath:semantic_example.zip"
+      collection-config-name: semantic_example
+      number-of-shards: 1
+      number-of-replicas: 2
     connection:
       url: http://localhost:8983/solr
       queue-size: 2000 #size of each of the blocking queues  queue-size * thread-count = total document queue before blocking
@@ -68,6 +68,10 @@ solr-config:
         subject: your-subject
         scope: solr # scope requested for oauth
         require-dpop: true # true if we are to include dpop proof to the server
+        proxy-settings:
+          enabled: true
+          host: http://localhost
+          port: 80
 
 vector-config:
   title:
@@ -89,11 +93,11 @@ vector-config:
     similarity-function: cosine #cosine, dot_product, or euclidean.  Defaults to dot_product
     hnsw-max-connections: 16 #if not filled out, this will default to 16
     hnsw-beam-width: 100 #if not filled out, this will default to 100
-    collection_creation:
-      collection_config_file: "classpath:default-chunk-config.zip"
-      collection_config_name: vector_config
-      number_of_shards: 1
-      number_of_replicas: 2
+    collection-creation:
+      collection-config-file: "classpath:default-chunk-config.zip"
+      collection-config-name: vector_config
+      number-of-shards: 1
+      number-of-replicas: 2
 
 
 grpc-test-client-config:
