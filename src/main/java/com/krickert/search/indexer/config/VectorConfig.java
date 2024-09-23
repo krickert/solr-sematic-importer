@@ -14,6 +14,9 @@ import io.micronaut.serde.annotation.Serdeable;
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class VectorConfig {
 
+    @JsonProperty("field-name")
+    private String fieldName;
+
     @JsonProperty("chunk-overlap")
     private Integer chunkOverlap;
 
@@ -49,6 +52,14 @@ public class VectorConfig {
 
     @JsonProperty("collection-creation")
     private VectorCollectionCreationConfig collectionCreation;
+
+    public String getFieldName() {
+        return fieldName;
+    }
+
+    public void setFieldName(String fieldName) {
+        this.fieldName = fieldName;
+    }
 
     public Integer getChunkOverlap() {
         return chunkOverlap;
@@ -149,6 +160,7 @@ public class VectorConfig {
     @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
+                .add("fieldName", fieldName)
                 .add("chunkOverlap", chunkOverlap)
                 .add("chunkSize", chunkSize)
                 .add("chunkField", chunkField)
