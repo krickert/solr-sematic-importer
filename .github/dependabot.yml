@@ -9,4 +9,12 @@ updates:
     directory: "/" # Location of package manifests
     schedule:
       interval: "daily"
+    registries:
+      - github-packages
 
+registries:
+  github-packages:
+    type: maven
+    url: https://maven.pkg.github.com/krickert/rag-models
+    username: krickert
+    password: ${{secrets.GH_PAT}}
