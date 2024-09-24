@@ -1,6 +1,7 @@
 package com.krickert.search.indexer;
 
 import com.krickert.search.indexer.config.IndexerConfiguration;
+import com.krickert.search.indexer.config.IndexerConfigurationProperties;
 import com.krickert.search.indexer.dto.IndexingStatus;
 import com.krickert.search.indexer.solr.SchemaConstants;
 import com.krickert.search.indexer.solr.client.SolrClientService;
@@ -43,6 +44,7 @@ public class SolrSemanticIndexer implements SemanticIndexer {
     private final IndexingTracker indexingTracker;
     private final SolrSourceDocumentPublisher solrSourceDocumentPublisher;
     private final SolrChunkDocumentPublisher solrChunkDocumentPublisher;
+    private final IndexerConfigurationProperties indexerConfigurationProperties;
 
     @Inject
     public SolrSemanticIndexer(HttpSolrSelectClient httpSolrSelectClient,
@@ -54,7 +56,7 @@ public class SolrSemanticIndexer implements SemanticIndexer {
                                IndexingTracker indexingTracker,
                                SolrSourceDocumentPublisher solrSourceDocumentPublisher,
                                SolrChunkDocumentPublisher solrChunkDocumentPublisher,
-                               SubscriptionManager subscriptionManager) {
+                               SubscriptionManager subscriptionManager, IndexerConfigurationProperties indexerConfigurationProperties) {
         log.info("creating SemanticIndexer");
         checkNotNull(solrClientService);
         checkNotNull(subscriptionManager);
@@ -67,6 +69,7 @@ public class SolrSemanticIndexer implements SemanticIndexer {
         log.info("finished creating SemanticIndexer");
         this.solrSourceDocumentPublisher = solrSourceDocumentPublisher;
         this.solrChunkDocumentPublisher = solrChunkDocumentPublisher;
+        this.indexerConfigurationProperties = indexerConfigurationProperties;
     }
 
     @Override
@@ -111,10 +114,10 @@ public class SolrSemanticIndexer implements SemanticIndexer {
     }
 
     private void waitForIndexingCompletion(IndexingTracker.TaskType taskType) throws IndexingFailedExecption {
-        int maxWarnings = 3;
+        int maxWarnings = indexerConfigurationProperties.getLoopMaxWarnings() == null ? 3 : indexerConfigurationProperties.getLoopMaxWarnings();
+        int waitTimeInSeconds = indexerConfigurationProperties.getLoopCheckSleepTimeSeconds() == null ? 10 : indexerConfigurationProperties.getLoopCheckSleepTimeSeconds(); // Time to wait between checks for new documents
         int warningCount = 0;
         long previousProcessedCount = 0;
-        int waitTimeInSeconds = 10; // Time to wait between checks for new documents
         IndexingStatus taskStatus = getStatusByTaskType(taskType); // Getting the respective task status.
         long totalExpected = taskStatus.getTotalDocumentsFound();
 

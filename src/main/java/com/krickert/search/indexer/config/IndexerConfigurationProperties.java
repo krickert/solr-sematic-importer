@@ -20,6 +20,16 @@ public class IndexerConfigurationProperties {
     @JsonProperty("source-seed-data")
     private SourceSeedData sourceSeedData;
 
+    @JsonProperty("vector-batch-size")
+    private Integer vectorBatchSize;
+
+    @JsonProperty("loop-check-sleep-time-seconds")
+    private Integer loopCheckSleepTimeSeconds;
+
+    @JsonProperty("loop-max-warnings")
+    private Integer loopMaxWarnings;
+
+
     // Getters and Setters
     public String getVectorGrpcChannel() {
         return vectorGrpcChannel;
@@ -37,12 +47,49 @@ public class IndexerConfigurationProperties {
         this.chunkerGrpcChannel = chunkerGrpcChannel;
     }
 
+    public Integer getVectorBatchSize() {
+        return vectorBatchSize;
+    }
+
+    public void setVectorBatchSize(Integer vectorBatchSize) {
+        this.vectorBatchSize = vectorBatchSize;
+    }
+
+    public Integer getLoopCheckSleepTimeSeconds() {
+        return loopCheckSleepTimeSeconds;
+    }
+
+    public void setLoopCheckSleepTimeSeconds(Integer loopCheckSleepTimeSeconds) {
+        this.loopCheckSleepTimeSeconds = loopCheckSleepTimeSeconds;
+    }
+
+    public Integer getLoopMaxWarnings() {
+        return loopMaxWarnings;
+    }
+
+    public void setLoopMaxWarnings(Integer loopMaxWarnings) {
+        this.loopMaxWarnings = loopMaxWarnings;
+    }
+
     public SourceSeedData getSourceSeedData() {
         return sourceSeedData;
     }
 
     public void setSourceSeedData(SourceSeedData sourceSeedData) {
         this.sourceSeedData = sourceSeedData;
+    }
+
+
+    @Override
+    public String toString() {
+        return MoreObjects.toStringHelper(this)
+                .add("vectorGrpcChannel", vectorGrpcChannel)
+                .add("chunkerGrpcChannel", chunkerGrpcChannel)
+                .add("sourceSeedData", sourceSeedData)
+                .add("vectorBatchSize", vectorBatchSize)
+                .add("loopCheckSleepTimeSeconds", loopCheckSleepTimeSeconds)
+                .add("loopMaxWarnings", loopMaxWarnings)
+                .toString();
     }
 
     @ConfigurationProperties("source-seed-data")
@@ -82,12 +129,4 @@ public class IndexerConfigurationProperties {
         }
     }
 
-    @Override
-    public String toString() {
-        return MoreObjects.toStringHelper(this)
-                .add("vectorGrpcChannel", vectorGrpcChannel)
-                .add("chunkerGrpcChannel", chunkerGrpcChannel)
-                .add("sourceSeedData", sourceSeedData)
-                .toString();
-    }
 }

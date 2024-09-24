@@ -13,7 +13,6 @@ import java.util.Map;
 import static com.krickert.search.indexer.config.ConfigTestHelpers.testConnectionString;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
-import static org.testcontainers.shaded.org.hamcrest.Matchers.containsInAnyOrder;
 
 @MicronautTest
 public class IndexerConfigurationTest {
@@ -40,6 +39,9 @@ public class IndexerConfigurationTest {
         assertTrue(properties.getVectorGrpcChannel().endsWith(vectorizerPort));
         assertNotNull(properties.getChunkerGrpcChannel());
         assertTrue(properties.getChunkerGrpcChannel().endsWith(chunkerPort));
+        assertEquals(3, properties.getLoopCheckSleepTimeSeconds());
+        assertEquals(5, properties.getLoopMaxWarnings());
+        assertEquals(2, properties.getVectorBatchSize());
 
         // Solr Configuration Assertions
         SolrConfiguration sourceConfig = indexerConfiguration.getSourceSolrConfiguration();

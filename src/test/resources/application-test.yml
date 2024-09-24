@@ -26,6 +26,9 @@ indexer-manager:
 indexer:
   vector-grpc-channel: "localhost:${grpc-test-client-config.vectorizer.grpc-test-port}"
   chunker-grpc-channel: "localhost:${grpc-test-client-config.chunker.grpc-test-port}"
+  loop-check-sleep-time-seconds: 3 #time in between loops to complete. if the document count that is processed and sent to solr is not incremented, it will wait for this amount of time to give a warning that we can have a "hung" crawl
+  loop-max-warnings: 5 #number of loops that the indexer will try before "giving up" and marking the crawl as failed/incomplete.  after this amount of loops, the crawl will stop.
+  vector-batch-size: 2 #do not change this unless you know what it's for because it will crash your system if it can't handle the load
   source-seed-data:
     enabled: false
     seed-json-file: sample_solr_result.json

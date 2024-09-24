@@ -12,7 +12,6 @@ import jakarta.inject.Singleton;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.solr.client.solrj.SolrServerException;
 import org.apache.solr.client.solrj.impl.ConcurrentUpdateHttp2SolrClient;
-import org.apache.solr.client.solrj.impl.Http2SolrClient;
 import org.apache.solr.common.SolrInputDocument;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -24,13 +23,13 @@ import java.util.*;
 public class ChunkDocumentListener implements DocumentListener {
 
     private static final Logger log = LoggerFactory.getLogger(ChunkDocumentListener.class);
-    private static final int BATCH_SIZE = 3;
-
+    private static final Integer DEFAULT_BATCH_SIZE = 3;
     private final Map<String, VectorConfig> chunkVectorConfig;
     private final ChunkServiceGrpc.ChunkServiceBlockingStub chunkServiceBlockingStub;
     private final EmbeddingServiceGrpc.EmbeddingServiceBlockingStub embeddingServiceBlockingStub;
     private final ConcurrentUpdateHttp2SolrClient vectorSolrClient;
     private final IndexingTracker indexingTracker;
+    private final Integer batchSize;
 
     public ChunkDocumentListener(IndexerConfiguration indexerConfiguration,
                                  @Named("chunkService") ChunkServiceGrpc.ChunkServiceBlockingStub chunkServiceBlockingStub,
@@ -42,6 +41,13 @@ public class ChunkDocumentListener implements DocumentListener {
         this.embeddingServiceBlockingStub = embeddingServiceBlockingStub;
         this.vectorSolrClient = solrClientService.vectorConcurrentClient();
         this.indexingTracker = indexingTracker;
+        Integer vectorBatchSize = indexerConfiguration.getIndexerConfigurationProperties().getVectorBatchSize();
+        if (vectorBatchSize == null || vectorBatchSize < 1) {
+            this.batchSize = DEFAULT_BATCH_SIZE;
+        } else {
+            this.batchSize = vectorBatchSize;
+        }
+        log.info("Batch size for the chunk listener is set to {}", this.batchSize);
     }
 
     @Override
@@ -88,8 +94,8 @@ public class ChunkDocumentListener implements DocumentListener {
 
         List<String> chunksList = chunkerReply.getChunksList();
         boolean hasError = false;
-        for (int i = 0; i < chunksList.size(); i += BATCH_SIZE) {
-            int endIndex = Math.min(i + BATCH_SIZE, chunksList.size());
+        for (int i = 0; i < chunksList.size(); i += batchSize) {
+            int endIndex = Math.min(i + batchSize, chunksList.size());
             List<String> chunkBatch = chunksList.subList(i, endIndex);
 
             EmbeddingsVectorsReply batchReply = getEmbeddingsVectorsReply(chunkBatch);
