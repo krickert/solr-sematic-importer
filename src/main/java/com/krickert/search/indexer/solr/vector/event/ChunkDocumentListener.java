@@ -24,7 +24,7 @@ import java.util.*;
 public class ChunkDocumentListener implements DocumentListener {
 
     private static final Logger log = LoggerFactory.getLogger(ChunkDocumentListener.class);
-    private static final int BATCH_SIZE = 20;
+    private static final int BATCH_SIZE = 3;
 
     private final Map<String, VectorConfig> chunkVectorConfig;
     private final ChunkServiceGrpc.ChunkServiceBlockingStub chunkServiceBlockingStub;

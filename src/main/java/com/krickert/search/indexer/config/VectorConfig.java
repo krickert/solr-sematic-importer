@@ -181,16 +181,16 @@ public class VectorConfig {
     @Serdeable
     public static class VectorCollectionCreationConfig {
 
-        @JsonProperty("collectionConfigFile")
+        @JsonProperty("collection-config-file")
         private String collectionConfigFile;
 
-        @JsonProperty("collectionConfigName")
+        @JsonProperty("collection-config-name")
         private String collectionConfigName;
 
-        @JsonProperty("numberOfShards")
+        @JsonProperty("number-of-shards")
         private int numberOfShards;
 
-        @JsonProperty("numberOfReplicas")
+        @JsonProperty("number-of-replicas")
         private int numberOfReplicas;
 
         public String getCollectionConfigFile() {

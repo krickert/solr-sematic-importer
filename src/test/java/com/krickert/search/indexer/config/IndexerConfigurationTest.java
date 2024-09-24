@@ -6,10 +6,14 @@ import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
 import jakarta.inject.Inject;
 import org.junit.jupiter.api.Test;
 
+import java.net.Proxy;
+import java.util.List;
 import java.util.Map;
 
 import static com.krickert.search.indexer.config.ConfigTestHelpers.testConnectionString;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
+import static org.testcontainers.shaded.org.hamcrest.Matchers.containsInAnyOrder;
 
 @MicronautTest
 public class IndexerConfigurationTest {
@@ -42,6 +46,8 @@ public class IndexerConfigurationTest {
         assertNotNull(sourceConfig);
         assertEquals("7.7.3", sourceConfig.getVersion());
         assertEquals("source_collection", sourceConfig.getCollection());
+        assertEquals(2, sourceConfig.getFilters().size());
+        assertThat(sourceConfig.getFilters()).containsExactlyInAnyOrderElementsOf(List.of("-id:*.csv", "title:*"));
 
         SolrConfiguration.Connection sourceConnection = sourceConfig.getConnection();
         assertNotNull(sourceConnection);
@@ -51,6 +57,9 @@ public class IndexerConfigurationTest {
         assertEquals("basic", sourceConnection.getAuthentication().getType());
         assertEquals("dummy_user", sourceConnection.getAuthentication().getUserName());
         assertEquals("dummy_password", sourceConnection.getAuthentication().getPassword());
+        assertEquals(Proxy.NO_PROXY, sourceConnection.getAuthentication().creaateProxy());
+        assertNull(sourceConnection.getAuthentication().getProxySettings());
+
         assertNull(sourceConnection.getQueueSize());
         assertNull(sourceConnection.getThreadCount());
         SolrConfiguration destConfig = indexerConfiguration.getDestinationSolrConfiguration();
@@ -80,6 +89,14 @@ public class IndexerConfigurationTest {
         assertEquals("https://my-token-url.com/oauth2/some-token/v1/token", destAuth.getIssuer());
         assertEquals("issuer-auth-id", destAuth.getIssuerAuthId());
         assertEquals("your-subject", destAuth.getSubject());
+        assertNotNull(destAuth.getProxySettings());
+        assertTrue(destAuth.getProxySettings().isEnabled());
+        assertEquals("localhost", destAuth.getProxySettings().getHost());
+        assertEquals(8080, destAuth.getProxySettings().getPort());
+        assertNotNull(destAuth.creaateProxy());
+        assertEquals(Proxy.Type.HTTP, destAuth.creaateProxy().type());
+        assertEquals("HTTP @ localhost/127.0.0.1:8080", destAuth.creaateProxy().toString());
+
 
         // Vector Configuration Assertions
         Map<String, VectorConfig> vectorConfigMap = indexerConfiguration.getVectorConfig();

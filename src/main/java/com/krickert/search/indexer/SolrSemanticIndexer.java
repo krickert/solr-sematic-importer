@@ -4,6 +4,7 @@ import com.krickert.search.indexer.config.IndexerConfiguration;
 import com.krickert.search.indexer.dto.IndexingStatus;
 import com.krickert.search.indexer.solr.SchemaConstants;
 import com.krickert.search.indexer.solr.client.SolrClientService;
+import com.krickert.search.indexer.solr.vector.event.SolrChunkDocumentPublisher;
 import com.krickert.search.indexer.solr.vector.event.SolrSourceDocumentPublisher;
 import com.krickert.search.indexer.solr.vector.event.SubscriptionManager;
 import com.krickert.search.indexer.solr.JsonToSolrDocParser;
@@ -28,7 +29,6 @@ import java.util.UUID;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.krickert.search.indexer.tracker.IndexingTracker.TaskType.MAIN;
 import static com.krickert.search.indexer.tracker.IndexingTracker.TaskType.VECTOR;
-import static java.lang.Thread.sleep;
 
 @Singleton
 public class SolrSemanticIndexer implements SemanticIndexer {
@@ -42,6 +42,7 @@ public class SolrSemanticIndexer implements SemanticIndexer {
     private final SolrAdminActions solrAdminActions;
     private final IndexingTracker indexingTracker;
     private final SolrSourceDocumentPublisher solrSourceDocumentPublisher;
+    private final SolrChunkDocumentPublisher solrChunkDocumentPublisher;
 
     @Inject
     public SolrSemanticIndexer(HttpSolrSelectClient httpSolrSelectClient,
@@ -52,6 +53,7 @@ public class SolrSemanticIndexer implements SemanticIndexer {
                                SolrAdminActions solrAdminActions,
                                IndexingTracker indexingTracker,
                                SolrSourceDocumentPublisher solrSourceDocumentPublisher,
+                               SolrChunkDocumentPublisher solrChunkDocumentPublisher,
                                SubscriptionManager subscriptionManager) {
         log.info("creating SemanticIndexer");
         checkNotNull(solrClientService);
@@ -64,6 +66,7 @@ public class SolrSemanticIndexer implements SemanticIndexer {
         this.indexingTracker = checkNotNull(indexingTracker);
         log.info("finished creating SemanticIndexer");
         this.solrSourceDocumentPublisher = solrSourceDocumentPublisher;
+        this.solrChunkDocumentPublisher = solrChunkDocumentPublisher;
     }
 
     @Override
@@ -213,6 +216,7 @@ public class SolrSemanticIndexer implements SemanticIndexer {
             insertDates(doc);
             insertCrawlId(doc, crawlId);
             solrSourceDocumentPublisher.publishDocument(doc);
+            solrChunkDocumentPublisher.publishDocument(doc);
         });
     }
 

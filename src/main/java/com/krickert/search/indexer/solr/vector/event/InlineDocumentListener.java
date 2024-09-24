@@ -68,21 +68,34 @@ public class InlineDocumentListener implements DocumentListener {
     }
 
     private void processInlineDocumentField(SolrInputDocument solrInputDocument, String fieldName, String fieldData, String origDocId) {
+        // If the field data is null, log a warning and return early
         if (fieldData == null) {
             log.warn("Field data for {} is null in document with id {}", fieldName, origDocId);
             return;
         }
 
+        // Retrieve the vector configuration for the given field name
         VectorConfig vectorConfig = inlineVectorConfig.get(fieldName);
-        final String finalFieldData;
-        if (vectorConfig.getMaxChars() > 0 && fieldData.length() > vectorConfig.getMaxChars()) {
-            finalFieldData = StringUtils.truncate(fieldData, vectorConfig.getMaxChars());
-        } else {
-            finalFieldData = fieldData;
-        }
+
+        // Determine the final field data, possibly truncated if it exceeds the maximum allowed characters
+        String finalFieldData = getFinalFieldData(fieldData, vectorConfig);
+
+        // Get the name of the vector field from the configuration
         String vectorFieldName = vectorConfig.getChunkFieldVectorName();
+
+        // Generate embeddings vector reply based on the processed field data
         EmbeddingsVectorReply embeddingsVectorReply = getEmbeddingsVectorReply(finalFieldData);
+
+        // Add the embeddings to the Solr input document
         solrInputDocument.addField(vectorFieldName, embeddingsVectorReply.getEmbeddingsList());
+    }
+
+    private String getFinalFieldData(String fieldData, VectorConfig vectorConfig) {
+        // Check if the vector config has a valid maximum character limit and truncate if necessary
+        if (vectorConfig.getMaxChars() != null && vectorConfig.getMaxChars() > 0 && fieldData.length() > vectorConfig.getMaxChars()) {
+            return StringUtils.truncate(fieldData, vectorConfig.getMaxChars());
+        }
+        return fieldData;
     }
 
     @Retryable(attempts = "3", delay = "1s", multiplier = "2.0", includes = {io.grpc.StatusRuntimeException.class})

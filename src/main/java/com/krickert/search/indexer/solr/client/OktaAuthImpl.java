@@ -21,6 +21,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.net.Proxy;
 import java.nio.charset.StandardCharsets;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
@@ -41,6 +42,7 @@ public class OktaAuthImpl implements OktaAuth {
     private final String tokenEndpoint;
     private final String scope;
     private final boolean dpopRequired;
+    private final Proxy proxy;
 
     private volatile String cachedToken;
     private volatile long tokenExpirationTime;
@@ -61,6 +63,7 @@ public class OktaAuthImpl implements OktaAuth {
             this.scope = authentication.getScope();
             this.enabled = true;
             this.dpopRequired = authentication.isRequireDpop();
+            this.proxy = authentication.creaateProxy();
             log.info("Okta authentication enabled");
         } else {
             this.enabled = false;
@@ -69,6 +72,7 @@ public class OktaAuthImpl implements OktaAuth {
             this.tokenEndpoint = null;
             this.scope = null;
             this.dpopRequired = false;
+            this.proxy = Proxy.NO_PROXY;
             log.info("connection destination did not include oauth");
         }
     }
@@ -101,7 +105,9 @@ public class OktaAuthImpl implements OktaAuth {
     }
 
     private void refreshAccessToken() throws IOException {
-        OkHttpClient client = new OkHttpClient();
+        OkHttpClient.Builder builder = new OkHttpClient.Builder();
+        builder.proxy(proxy);
+        OkHttpClient client = builder.build();
 
         String credentials = clientId + ":" + clientSecret;
         String encodedCredentials = Base64.getEncoder().encodeToString(credentials.getBytes(StandardCharsets.UTF_8));

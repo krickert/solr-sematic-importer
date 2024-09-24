@@ -11,13 +11,13 @@ import io.micronaut.serde.annotation.Serdeable;
 @Serdeable
 public class IndexerConfigurationProperties {
 
-    @JsonProperty("vectorGrpcChannel")
+    @JsonProperty("vector-grpc-channel")
     private String vectorGrpcChannel;
 
-    @JsonProperty("chunkerGrpcChannel")
+    @JsonProperty("chunker-grpc-channel")
     private String chunkerGrpcChannel;
 
-    @JsonProperty("sourceSeedData")
+    @JsonProperty("source-seed-data")
     private SourceSeedData sourceSeedData;
 
     // Getters and Setters
@@ -53,7 +53,7 @@ public class IndexerConfigurationProperties {
         @JsonProperty("enabled")
         private boolean enabled;
 
-        @JsonProperty("seedJsonFile")
+        @JsonProperty("seed-json-file")
         private String seedJsonFile;
 
         // Getters and Setters

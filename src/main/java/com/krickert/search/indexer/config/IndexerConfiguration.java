@@ -3,11 +3,14 @@ package com.krickert.search.indexer.config;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.MoreObjects;
+import io.micronaut.core.util.CollectionUtils;
 import io.micronaut.serde.annotation.Serdeable;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
+import org.apache.commons.lang3.StringUtils;
 
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.stream.Collectors;
 
@@ -21,13 +24,13 @@ public class IndexerConfiguration {
     @JsonProperty("name")
     private String name = "default";
 
-    @JsonProperty("indexer_config")
+    @JsonProperty("indexer-config")
     private final IndexerConfigurationProperties indexerConfigurationProperties;
 
-    @JsonProperty("solr_config")
+    @JsonProperty("solr-config")
     private final Map<String, SolrConfiguration> solrConfiguration;
 
-    @JsonProperty("vector_config")
+    @JsonProperty("vector-config")
     private final Map<String, VectorConfig> vectorConfig;
 
     private final Map<String, VectorConfig> inlineVectorConfig;
@@ -41,15 +44,43 @@ public class IndexerConfiguration {
             @JsonProperty("vectorConfig") Map<String, VectorConfig> vectorConfig
     ) {
         this.indexerConfigurationProperties = indexerConfigurationProperties;
-        this.vectorConfig = checkNotNull(vectorConfig);
-        this.chunkVectorConfig = vectorConfig.entrySet().stream()
+        this.vectorConfig = createVectorConfig(checkNotNull(vectorConfig));
+        this.chunkVectorConfig = this.vectorConfig.entrySet().stream()
                 .filter(entry -> Boolean.TRUE.equals(entry.getValue().getChunkField())) // Handles nulls by treating them as false
                 .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
-        this.inlineVectorConfig = vectorConfig.entrySet().stream()
+        this.inlineVectorConfig = this.vectorConfig.entrySet().stream()
                 .filter(entry -> Boolean.FALSE.equals(entry.getValue().getChunkField())) // Handles nulls by treating them as false
                 .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
         this.solrConfiguration = solrConfigurations.stream()
                 .collect(Collectors.toMap(SolrConfiguration::getName, solrConfiguration -> solrConfiguration));
+    }
+
+    /**
+     * Creates a new vector configuration map where the keys are updated based on a field name
+     * specified within each VectorConfig object. If the field name is not specified, the original key is used.
+     *
+     * @param vectorConfig the original vector configuration map with keys as strings
+     *                      and values as VectorConfig objects.
+     * @return a new map with updated keys from the field names specified in the VectorConfig objects.
+     */
+    private Map<String, VectorConfig> createVectorConfig(Map<String, VectorConfig> vectorConfig) {
+        // Initialize a new HashMap with the same size as the input map for efficient memory allocation
+        Map<String, VectorConfig> result = new HashMap<>(vectorConfig.size());
+
+        // Iterate over each entry in the input map
+        for (Map.Entry<String, VectorConfig> entry : vectorConfig.entrySet()) {
+            String key = entry.getKey();                // Get current key
+            String fieldNameInConfig = entry.getValue().getFieldName(); // Get field name from config
+
+            // Use the field name if it exists; otherwise, use the key itself
+            String fieldName = (fieldNameInConfig != null && !fieldNameInConfig.isEmpty()) ? fieldNameInConfig : key;
+
+            // Put the possibly new key and the same value into the result map
+            result.put(fieldName, entry.getValue());
+        }
+
+        // Return the newly created map
+        return result;
     }
 
     public IndexerConfigurationProperties getIndexerConfigurationProperties() {

@@ -8,6 +8,8 @@ import io.micronaut.context.annotation.EachProperty;
 import io.micronaut.context.annotation.Parameter;
 import io.micronaut.serde.annotation.Serdeable;
 
+import java.net.InetSocketAddress;
+import java.net.Proxy;
 import java.util.Collection;
 import java.util.Collections;
 
@@ -251,22 +253,22 @@ public class SolrConfiguration {
             @JsonProperty("type")
             private String type;
 
-            @JsonProperty("clientSecret")
+            @JsonProperty("client-secret")
             private String clientSecret;
 
-            @JsonProperty("clientId")
+            @JsonProperty("client-id")
             private String clientId;
 
             @JsonProperty("issuer")
             private String issuer;
 
-            @JsonProperty("issuerAuthId")
+            @JsonProperty("issuer-auth-id")
             private String issuerAuthId;
 
             @JsonProperty("subject")
             private String subject;
 
-            @JsonProperty("user_name")
+            @JsonProperty("user-name")
             private String userName;
 
             @JsonProperty("password")
@@ -275,8 +277,11 @@ public class SolrConfiguration {
             @JsonProperty("scope")
             private String scope;
 
-            @JsonProperty("require_dpop")
+            @JsonProperty("require-dpop")
             private boolean requireDpop = false;
+
+            @JsonProperty("proxy-settings")
+            private ProxySettings proxySettings;
 
             public boolean isEnabled() {
                 return enabled;
@@ -366,6 +371,14 @@ public class SolrConfiguration {
                 this.requireDpop = requireDpop;
             }
 
+            public ProxySettings getProxySettings() {
+                return proxySettings;
+            }
+
+            public void setProxySettings(ProxySettings proxySettings) {
+                this.proxySettings = proxySettings;
+            }
+
             @Override
             public String toString() {
                 return MoreObjects.toStringHelper(this)
@@ -380,7 +393,56 @@ public class SolrConfiguration {
                         .add("password", password)
                         .add("scope", scope)
                         .add("requireDpop", requireDpop)
+                        .add("proxySettings", proxySettings)
                         .toString();
+            }
+            @Serdeable
+            @ConfigurationProperties("proxy-settings")
+            @JsonInclude(JsonInclude.Include.NON_NULL)
+            public static class ProxySettings {
+                @JsonProperty("enabled")
+                private boolean enabled = false;
+                @JsonProperty("host")
+                private String host;
+                @JsonProperty("port")
+                private Integer port;
+
+                public boolean isEnabled() {
+                    return enabled;
+                }
+                public void setEnabled(boolean enabled) {
+                    this.enabled = enabled;
+                }
+                public String getHost() {
+                    return host;
+                }
+                public void setHost(String host) {
+                    this.host = host;
+                }
+                public Integer getPort() {
+                    return port;
+                }
+                public void setPort(Integer port) {
+                    this.port = port;
+                }
+
+                public String toString() {
+                    return MoreObjects.toStringHelper(this)
+                            .add("enabled", enabled)
+                            .add("host", host)
+                            .add("port", port)
+                            .toString();
+                }
+            }
+
+            public Proxy creaateProxy() {
+                if (proxySettings == null || !proxySettings.isEnabled()) {
+                    return Proxy.NO_PROXY;
+                }
+                assert proxySettings.getHost() != null;
+                assert proxySettings.getPort() != null;
+                assert proxySettings.getPort() > 0;
+                return new Proxy(Proxy.Type.HTTP, new java.net.InetSocketAddress(proxySettings.getHost(), proxySettings.getPort()));
             }
         }
     }
