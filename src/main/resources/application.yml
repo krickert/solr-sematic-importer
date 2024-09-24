@@ -46,16 +46,16 @@ solr-config:
       authentication:
         enabled: false
         type: basic
-        user_name: dummy_user
+        user-name: dummy_user
         password: dummy_password
   destination:
     version: 9.6.1
     collection: destination_collection
-    collection_creation:
-      collection_config_file: "classpath:default_base_config.zip"
-      collection_config_name: semantic_example
-      number_of_shards: 1
-      number_of_replicas: 2
+    collection-creation:
+      collection-config-file: "classpath:default_base_config.zip"
+      collection-config-name: semantic_example
+      number-of-shards: 1
+      number-of-replicas: 2
     connection:
       url: http://localhost:8983/solr
       queue-size: 100 #size of each of the blocking queues  queue-size * thread-count = total document queue before blocking
